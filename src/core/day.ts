@@ -32,6 +32,7 @@ import {
 	readSection,
 	readYamlList,
 	readYamlString,
+	hasYamlKey,
 	removeYamlKey,
 	setYamlKey,
 	splitFrontmatter,
@@ -76,6 +77,8 @@ export interface DayEntry {
 	diary: string;
 	/** Scratchpad for quick capture during the day. */
 	notes: string;
+	/** Recurring rules already added to this day (property "recurring"), so they're never added twice. */
+	recurring: string[];
 }
 
 export function emptyGroup(name: string | null): TaskGroup {
@@ -83,7 +86,7 @@ export function emptyGroup(name: string | null): TaskGroup {
 }
 
 export function emptyDay(): DayEntry {
-	return { tags: [], goals: "", groups: [emptyGroup(null)], diary: "", notes: "" };
+	return { tags: [], goals: "", groups: [emptyGroup(null)], diary: "", notes: "", recurring: [] };
 }
 
 export function newTask(text: string, depth = 0): Task {
@@ -263,6 +266,7 @@ export function parseDay(text: string): DayEntry {
 		groups,
 		diary: readSection(body, DIARY_HEADING) ?? "",
 		notes: readSection(body, NOTES_HEADING) ?? "",
+		recurring: readYamlList(frontmatter, "recurring"),
 	};
 }
 
@@ -275,6 +279,10 @@ export function applyDay(text: string, entry: DayEntry): string {
 	let { frontmatter, body } = splitFrontmatter(text);
 	frontmatter = setYamlKey(frontmatter, "tags", yamlListLines("tags", entry.tags.map(cleanTag).filter(Boolean)));
 	frontmatter = removeYamlKey(frontmatter, "goal"); // moved into the Goals section
+	// Only written once a recurring task has been added to this day.
+	if (entry.recurring.length || hasYamlKey(frontmatter, "recurring")) {
+		frontmatter = setYamlKey(frontmatter, "recurring", yamlListLines("recurring", [...new Set(entry.recurring)]));
+	}
 	if (body.trim() === "") body = "";
 	body = writeSection(body, GOALS_HEADING, entry.goals, TASKS_HEADING);
 	body = writeSection(body, TASKS_HEADING, serializeTaskGroups(entry.groups));
@@ -352,10 +360,23 @@ export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>): Carr
 	return out;
 }
 
-/** Adds carried tasks to the matching cards (by heading), creating cards as needed. */
+/**
+ * Adds carried tasks to the matching cards (by heading), creating cards as
+ * needed. A task that's already open in the day (same text, e.g. today's
+ * recurring "Stretch") isn't added a second time.
+ */
 export function addCarried(entry: DayEntry, cards: CarriedCard[]): number {
 	let count = 0;
+	const open = new Set(allTasks(entry).filter(isOpen).map((t) => t.text.trim().toLowerCase()));
 	for (const card of cards) {
+		// Skip a duplicate top-level task together with its subtasks.
+		const tasks: Task[] = [];
+		let skipping = false;
+		for (const t of card.tasks) {
+			if (t.depth === 0) skipping = open.has(t.text.trim().toLowerCase());
+			if (!skipping) tasks.push(t);
+		}
+		if (tasks.length === 0) continue;
 		let group =
 			card.name === null
 				? entry.groups[0]!
@@ -366,8 +387,8 @@ export function addCarried(entry: DayEntry, cards: CarriedCard[]): number {
 		}
 		// Drop trailing empty rows so the carried tasks follow real ones.
 		while (group.tasks.length && group.tasks[group.tasks.length - 1]!.text.trim() === "") group.tasks.pop();
-		group.tasks.push(...card.tasks);
-		count += card.tasks.length;
+		group.tasks.push(...tasks);
+		count += tasks.length;
 	}
 	return count;
 }

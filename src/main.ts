@@ -4,16 +4,23 @@ import { DEFAULT_SETTINGS, DaybookSettings, Selection } from "./core/types";
 import { VaultStore } from "./obsidian/store";
 import { ProjectStore } from "./obsidian/projects";
 import { EventStore } from "./obsidian/events";
+import { RecurringStore } from "./obsidian/recurring";
 import { DaybookSettingTab } from "./obsidian/settingsTab";
 import { CalendarView, VIEW_TYPE_CALENDAR } from "./ui/calendarView";
 import { DaybookView, VIEW_TYPE_DAYBOOK } from "./ui/daybookView";
 import { newEvent } from "./ui/eventActions";
+import { RulesModal, openAddRule } from "./ui/recurringModal";
 
 export default class DaybookPlugin extends Plugin {
 	settings: DaybookSettings = structuredClone(DEFAULT_SETTINGS);
 	store!: VaultStore;
 	projects!: ProjectStore;
 	events!: EventStore;
+	recurring!: RecurringStore;
+	/** Tasks added from recurring rules that aren't saved into their day yet. */
+	unsavedRuleTasks = new WeakSet<object>();
+	/** Bumped whenever the recurring rules change, so open days can redraw. */
+	recurringVersion = 0;
 	/** Bumped whenever an event note changes, so views know to redraw. */
 	eventsVersion = 0;
 	/** What the main view is showing; the calendar highlights it. */
@@ -37,6 +44,15 @@ export default class DaybookPlugin extends Plugin {
 		this.store = new VaultStore(this.app);
 		this.projects = new ProjectStore(this.app, this.store, () => this.settings.rootFolder);
 		this.events = new EventStore(this.app, this.store, () => this.settings.rootFolder);
+		this.recurring = new RecurringStore(this.store, () => this.settings.rootFolder);
+		const rulesChanged = debounce(() => {
+			this.recurringVersion++;
+			this.notify();
+		}, 300, true);
+		const isRules = (path: string) => path === this.recurring.path();
+		this.registerEvent(this.app.vault.on("modify", (file) => isRules(file.path) && rulesChanged()));
+		this.registerEvent(this.app.vault.on("create", (file) => isRules(file.path) && rulesChanged()));
+		this.registerEvent(this.app.vault.on("delete", (file) => isRules(file.path) && rulesChanged()));
 
 		// Event notes changed (here, in the editor, or by sync): tell the views.
 		const eventsChanged = debounce(() => {
@@ -70,6 +86,16 @@ export default class DaybookPlugin extends Plugin {
 			id: "new-event",
 			name: "New event",
 			callback: () => newEvent(this, todayKey(), todayKey()),
+		});
+		this.addCommand({
+			id: "recurring-tasks",
+			name: "Recurring tasks",
+			callback: () => new RulesModal(this).open(),
+		});
+		this.addCommand({
+			id: "add-recurring-task",
+			name: "Add recurring task",
+			callback: () => openAddRule(this),
 		});
 		this.addCommand({
 			id: "show-calendar",

@@ -9,9 +9,12 @@ Daybook/2026/2026.md             year goals, reflection
 Daybook/2026/Weeks/2026-W46.md   week goals, reflection
 Daybook/Projects/Website.md      project: status, dates, colour, ## Milestones, ## Notes
 Daybook/Events/Germany.md        event: start, end, category, ## Notes
+Daybook/Recurring.md             recurring task rules (one per line, written by the dialog)
 ```
 
 A day's task card belongs to a project when its heading links to it: `### [[Website]]`. Active projects show on every day from their start date until they're finished.
+
+Recurring tasks ("Pay rent, every month on the 1st") are managed in a dialog (↻ in the Tasks header, or the "Recurring tasks" command). On today and later days, due rules show up as tasks; they're saved into the day with its first edit, and the day remembers them in a `recurring` property so they're never added twice. Past days are left alone. A day-of-month that a month doesn't have (31st, 29 Feb) falls on that month's last day.
 
 Files are created on your first keystroke, never just by opening a day. Daybook only rewrites the `tags` property and the `## Goals`, `## Tasks` and `## Diary` sections; anything else you put in a note is kept.
 
@@ -41,6 +44,7 @@ src/core/        Planner logic. No Obsidian imports — portable.
   sketch.ts      Sketch strokes <-> SVG
   year.ts        Year grid rows, category colours
   event.ts       Multi-day events (trips etc.)
+  recurring.ts   Recurring task rules: reading/writing, when due, adding to a day
   types.ts       Settings and shared types
 src/obsidian/    Vault reading/writing and the settings tab
 src/ui/          Views: sidebar calendar, main view, day card, task cards, Markdown box

@@ -7,6 +7,7 @@ import type DaybookPlugin from "../main";
 import { DateKey, formatDate, todayKey } from "../core/dates";
 import { CarriedCard, DayEntry, addCarried, applyDay, emptyDay, listOpenTasks, openTasks, parseDay, takeOpenTasks } from "../core/day";
 import { CarryModal } from "./carryModal";
+import { addRuleTasks, pendingRules } from "../core/recurring";
 import { CategoryModal, addCategory, tagFromName } from "./categoryModal";
 import { dayKeyFromPath, dayPath } from "../core/paths";
 import { lastDayBefore } from "../obsidian/store";
@@ -42,6 +43,7 @@ export class DayCard extends Component {
 	async init(): Promise<void> {
 		const text = await this.plugin.store.read(this.path);
 		this.entry = text === null ? emptyDay() : parseDay(text);
+		await this.addDueRules();
 		this.projects = await this.plugin.projects.activeOn(this.date);
 		await this.findCarrySource();
 		if (this.carrySource && this.plugin.settings.autoCarry && this.date === todayKey()) {
@@ -49,6 +51,36 @@ export class DayCard extends Component {
 			return;
 		}
 		this.render();
+	}
+
+	// ---- Recurring tasks ----
+
+	/** Tasks from rules shown on this day but not saved yet. */
+	private ruleTasks: object[] = [];
+
+	/**
+	 * Today and later: rules due this day show up as tasks. They're saved with
+	 * the day's first edit (and recorded, so they're never added twice).
+	 * Past days are left as they were.
+	 */
+	private async addDueRules(): Promise<void> {
+		this.ruleTasks = [];
+		if (this.date < todayKey()) return;
+		const rules = await this.plugin.recurring.rules();
+		const due = pendingRules(this.entry, rules, this.date);
+		this.ruleTasks = addRuleTasks(this.entry, due);
+		for (const t of this.ruleTasks) this.plugin.unsavedRuleTasks.add(t);
+	}
+
+	/** After a save, tasks from rules are ordinary tasks: drop the "not saved yet" mark. */
+	private markRuleTasksSaved(): void {
+		if (this.ruleTasks.length === 0) return;
+		for (const t of this.ruleTasks) this.plugin.unsavedRuleTasks.delete(t);
+		this.ruleTasks = [];
+		this.containerEl.querySelectorAll(".daybook-task.is-from-rule").forEach((row) => {
+			row.removeClass("is-from-rule");
+			row.querySelector(".daybook-rule-mark")?.remove();
+		});
 	}
 
 	// ---- Carrying unfinished tasks from the last day written ----
@@ -235,6 +267,7 @@ export class DayCard extends Component {
 		const snapshot = structuredClone(this.entry);
 		this.saving = this.saving
 			.then(() => this.plugin.store.write(this.path, (old) => applyDay(old, snapshot)))
+			.then(() => this.markRuleTasksSaved())
 			.catch((e: unknown) => {
 				console.error("Daybook: could not save", this.path, e);
 				new Notice(`Daybook could not save ${this.path}.`);

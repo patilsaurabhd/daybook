@@ -110,6 +110,10 @@ export function setYamlKey(frontmatter: string | null, key: string, valueLines: 
 	return lines.join("\n");
 }
 
+export function hasYamlKey(frontmatter: string | null, key: string): boolean {
+	return frontmatter !== null && keyRange(frontmatter.split(/\r?\n/), key) !== null;
+}
+
 /** Removes a top-level key and its value lines. */
 export function removeYamlKey(frontmatter: string | null, key: string): string | null {
 	if (frontmatter === null) return null;

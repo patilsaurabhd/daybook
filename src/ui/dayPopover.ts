@@ -4,7 +4,8 @@
 
 import { Component, Notice, debounce, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { DateKey, formatLongDate } from "../core/dates";
+import { DateKey, formatLongDate, todayKey } from "../core/dates";
+import { addRuleTasks, pendingRules } from "../core/recurring";
 import { DayEntry, applyDay, emptyDay, parseDay } from "../core/day";
 import { dayPath } from "../core/paths";
 import { TaskBoard } from "./taskBoard";
@@ -86,6 +87,11 @@ export class DayPopover extends Component {
 	private async readNote(body: HTMLElement): Promise<void> {
 		const text = await this.plugin.store.read(this.path);
 		this.entry = text === null ? emptyDay() : parseDay(text);
+		if (this.date >= todayKey()) {
+			// Due recurring tasks show here too; saved with the first edit.
+			const added = addRuleTasks(this.entry, pendingRules(this.entry, await this.plugin.recurring.rules(), this.date));
+			for (const t of added) this.plugin.unsavedRuleTasks.add(t);
+		}
 		const projects = await this.plugin.projects.activeOn(this.date);
 		this.addChild(
 			new TaskBoard(this.plugin, body, this.entry.groups, () => this.changed(), {
@@ -121,12 +127,14 @@ export class DayPopover extends Component {
 		if (!this.dirty) return this.saving;
 		this.dirty = false;
 		const groups = structuredClone(this.entry.groups);
+		const recurring = [...this.entry.recurring];
 		this.saving = this.saving
 			.then(() =>
 				this.plugin.store.write(this.path, (old) => {
 					// Only the tasks change here; keep goals, tags and diary as they are in the file.
 					const current = parseDay(old);
 					current.groups = groups;
+					current.recurring = [...new Set([...current.recurring, ...recurring])];
 					return applyDay(old, current);
 				}),
 			)

@@ -436,3 +436,108 @@ test("tag from category name", async () => {
 	assert.equal(tagFromName("#Birthday"), "birthday");
 	assert.equal(tagFromName("Café"), "café");
 });
+
+test("recurring rules: reading and writing lines", async () => {
+	const R = await import("../src/core/recurring");
+	assert.deepEqual(R.parseRule("- Pay rent | monthly on 1"), { text: "Pay rent", freq: { kind: "monthly", day: 1 }, card: null, from: "", paused: false });
+	assert.deepEqual(R.parseRule("- Team sync | weekly on Thu, mon | card: Work")!.freq, { kind: "weekly", days: [1, 4] });
+	assert.equal(R.parseRule("- Team sync | weekly on Thu, mon | card: Work")!.card, "Work");
+	assert.deepEqual(R.parseRule("- Backup | every 3 days | from: 2026-11-09 | paused"), {
+		text: "Backup",
+		freq: { kind: "every", n: 3, unit: "days" },
+		card: null,
+		from: "2026-11-09",
+		paused: true,
+	});
+	assert.equal(R.parseRule("- Just a note"), null);
+	assert.equal(R.parseRule("- Bad | monthly on 32"), null);
+	for (const line of [
+		"- Pay rent | monthly on 1",
+		"- Water plants | weekly on sun",
+		"- Passport renewal | yearly on 03-14",
+		"- Stretch | daily | card: [[Health]] | from: 2026-11-09",
+		"- Backup | every 2 weeks | from: 2026-11-09 | paused",
+		"- Report | monthly on last",
+		"- Standup | weekdays",
+	]) {
+		assert.equal(R.formatRule(R.parseRule(line)!), line);
+	}
+	// The note: only the Recurring section changes
+	const note = R.applyRules("", [R.parseRule("- Stretch | daily")!]);
+	assert.match(note, /## Recurring\n\n- Stretch \| daily\n$/);
+	assert.deepEqual(R.parseRules(note).map((r) => r.text), ["Stretch"]);
+	const edited = R.applyRules("My intro\n\n## Recurring\n\n- Old | daily\n\n## Ideas\n\nkeep me\n", [R.parseRule("- New | weekdays")!]);
+	assert.equal(edited, "My intro\n\n## Recurring\n\n- New | weekdays\n\n## Ideas\n\nkeep me\n");
+});
+
+test("recurring rules: when they're due", async () => {
+	const R = await import("../src/core/recurring");
+	const rule = (line: string) => R.parseRule(line)!;
+	// Month ends: the 31st falls back to the last day of shorter months
+	const r31 = rule("- Rent | monthly on 31");
+	assert.equal(R.isDue(r31, "2026-01-31"), true);
+	assert.equal(R.isDue(r31, "2026-04-30"), true);
+	assert.equal(R.isDue(r31, "2026-04-29"), false);
+	assert.equal(R.isDue(r31, "2026-02-28"), true);
+	assert.equal(R.isDue(r31, "2028-02-29"), true); // leap year
+	assert.equal(R.isDue(r31, "2028-02-28"), false);
+	assert.equal(R.isDue(rule("- Report | monthly on last"), "2026-11-30"), true);
+	// 29 Feb: on 29 Feb in leap years, 28 Feb otherwise
+	const leap = rule("- Birthday | yearly on 02-29");
+	assert.equal(R.isDue(leap, "2028-02-29"), true);
+	assert.equal(R.isDue(leap, "2028-02-28"), false);
+	assert.equal(R.isDue(leap, "2027-02-28"), true);
+	// Weekday names, independent of the first-day-of-week setting
+	const weekly = rule("- Plants | weekly on sun, wed");
+	assert.equal(R.isDue(weekly, "2026-11-08"), true); // Sunday
+	assert.equal(R.isDue(weekly, "2026-11-11"), true); // Wednesday
+	assert.equal(R.isDue(weekly, "2026-11-09"), false); // Monday
+	assert.equal(R.isDue(rule("- Standup | weekdays"), "2026-11-14"), false); // Saturday
+	// Every N, counted from "from"; nothing before "from"; paused never due
+	const every = rule("- Backup | every 3 days | from: 2026-11-09");
+	assert.deepEqual(["2026-11-08", "2026-11-09", "2026-11-10", "2026-11-12"].map((d) => R.isDue(every, d)), [false, true, false, true]);
+	assert.equal(R.isDue(rule("- X | every 2 weeks | from: 2026-11-09"), "2026-11-23"), true);
+	assert.equal(R.isDue(rule("- X | daily | paused"), "2026-11-09"), false);
+	assert.equal(R.nextDue(r31, "2026-11-09"), "2026-11-30");
+	assert.equal(
+		R.describe(r31, (d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]!, (m) => String(m)),
+		"Every month on the 31st (or the last day)",
+	);
+});
+
+test("recurring rules: added to a day once", async () => {
+	const R = await import("../src/core/recurring");
+	const D = await import("../src/core/day");
+	const rules = ["- Stretch | daily", "- Rent | monthly on 9 | card: Home", "- Gym | weekly on sat"].map((l) => R.parseRule(l)!);
+	const day = D.parseDay("## Tasks\n\n- [>] Stretch\n");
+	// "Stretch" is already there (carried over); "Gym" isn't due on a Monday
+	assert.deepEqual(R.pendingRules(day, rules, "2026-11-09").map((r) => r.text), ["Rent"]);
+	const fresh = D.emptyDay();
+	R.addRuleTasks(fresh, R.pendingRules(fresh, rules, "2026-11-09"));
+	assert.deepEqual(fresh.groups.map((g) => [g.name, g.tasks.map((t) => t.text)]), [[null, ["Stretch"]], ["Home", ["Rent"]]]);
+	const text = D.applyDay("", fresh);
+	assert.match(text, /^---\ntags: \[\]\nrecurring:\n  - stretch\n  - rent\n---/);
+	// Once recorded, deleting the task doesn't bring it back
+	const reread = D.parseDay(text);
+	reread.groups = [D.emptyGroup(null)];
+	assert.deepEqual(R.pendingRules(reread, rules, "2026-11-09"), []);
+	// Days without recurring tasks get no "recurring" property
+	assert.doesNotMatch(D.applyDay("", D.emptyDay()), /recurring/);
+});
+
+test("carrying doesn't duplicate a task that's already open today", async () => {
+	const D = await import("../src/core/day");
+	const today = D.parseDay("## Tasks\n\n- [ ] Stretch\n");
+	const n = D.addCarried(today, [
+		{
+			name: null,
+			tasks: [
+				{ done: false, text: "stretch", depth: 0, children: [] },
+				{ done: false, text: "warm up", depth: 1, children: [] },
+				{ done: false, text: "Email", depth: 0, children: [] },
+			],
+		},
+	]);
+	assert.equal(n, 1);
+	assert.deepEqual(today.groups[0]!.tasks.map((t) => [t.text, t.depth]), [["Stretch", 0], ["Email", 0]]);
+});

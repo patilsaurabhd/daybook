@@ -2285,3 +2285,91 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	width: 12px;
 	height: 12px;
 }
+
+/* ---------- Recurring tasks ---------- */
+
+/* A task from a recurring rule, not saved into the day yet */
+.daybook-task.is-from-rule .daybook-task-text {
+	color: var(--text-muted);
+}
+
+.daybook-rule-mark {
+	flex: none;
+	display: inline-flex;
+	color: var(--text-faint);
+}
+
+.daybook-rule-mark svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-rule-details .daybook-rule-days {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	padding: var(--size-2-2) 0 var(--size-4-2);
+}
+
+.daybook-rule-number {
+	width: 5em;
+}
+
+.daybook-rule-summary {
+	margin: var(--size-4-2) 0;
+	padding: var(--size-2-3) var(--size-4-3);
+	border-radius: var(--radius-m);
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.daybook-rules-modal button.daybook-rules-add {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.daybook-rules-list {
+	display: flex;
+	flex-direction: column;
+	max-height: 55vh;
+	overflow-y: auto;
+}
+
+.daybook-rule-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-2-3) 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.daybook-rule-row.is-paused .daybook-rule-info {
+	opacity: 0.55;
+}
+
+.daybook-rule-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.daybook-rule-text {
+	font-weight: var(--font-semibold);
+}
+
+.daybook-rule-meta {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.daybook-rule-tools {
+	display: flex;
+	gap: var(--size-2-1);
+}
+
+.daybook-rule-tools .clickable-icon.is-confirming {
+	color: var(--text-error);
+	background-color: var(--background-modifier-error);
+}

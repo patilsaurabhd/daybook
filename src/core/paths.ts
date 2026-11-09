@@ -42,6 +42,11 @@ export function projectPath(root: string, name: string): string {
 	return join(root, "Projects", `${name}.md`);
 }
 
+/** The one note holding all recurring-task rules. */
+export function recurringPath(root: string): string {
+	return join(root, "Recurring.md");
+}
+
 export function eventsFolder(root: string): string {
 	return join(root, "Events");
 }

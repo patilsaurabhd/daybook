@@ -93,10 +93,15 @@ export class DaybookView extends ItemView {
 		};
 		let lastSettings = layoutSettings();
 		let seenEvents = this.plugin.eventsVersion;
+		let seenRules = this.plugin.recurringVersion;
 		this.register(
 			this.plugin.onChange(() => {
 				this.applyFocus();
 				// An event was added, moved or deleted: redraw (unless the user is typing here).
+				if (this.plugin.recurringVersion !== seenRules) {
+					seenRules = this.plugin.recurringVersion;
+					if (this.level === "day" && !this.card?.hasFocus() && !this.card?.isDirty()) void this.show(true);
+				}
 				if (this.plugin.eventsVersion !== seenEvents) {
 					seenEvents = this.plugin.eventsVersion;
 					if (!this.card?.hasFocus()) void this.show(true);

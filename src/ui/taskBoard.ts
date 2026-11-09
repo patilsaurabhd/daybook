@@ -25,6 +25,7 @@ import {
 	sameName,
 } from "../core/project";
 import { ProjectPanel } from "./projectPanel";
+import { RulesModal } from "./recurringModal";
 
 /** Project rows are shown only when the board gets this (the day page). */
 export interface ProjectContext {
@@ -71,6 +72,11 @@ export class TaskBoard extends Component {
 		const head = this.containerEl.createDiv({ cls: "daybook-pane-head" });
 		head.createDiv({ cls: "daybook-pane-title", text: "Tasks" });
 		const buttons = head.createDiv({ cls: "daybook-pane-actions" });
+		if (!this.projectCtx?.compact) {
+			const rec = buttons.createEl("button", { cls: "daybook-add-card clickable-icon", attr: { "aria-label": "Recurring tasks" } });
+			setIcon(rec, "repeat");
+			this.registerDomEvent(rec, "click", () => new RulesModal(this.plugin).open());
+		}
 		if (this.projectCtx && !this.projectCtx.compact) {
 			const ctx = this.projectCtx;
 			const proj = buttons.createEl("button", { cls: "daybook-add-card clickable-icon", attr: { "aria-label": "Start a project" } });
@@ -694,6 +700,11 @@ export class TaskBoard extends Component {
 		setIcon(handle, "grip-vertical");
 		handle.addEventListener("pointerdown", (evt) => this.startDrag(evt, handle, row, { group: gi, index: ti }));
 
+		if (this.plugin.unsavedRuleTasks.has(task)) {
+			row.addClass("is-from-rule");
+			const mark = row.createSpan({ cls: "daybook-rule-mark", attr: { "aria-label": "From a recurring task. Saved when you edit this day." } });
+			setIcon(mark, "repeat");
+		}
 		if (task.carried) {
 			// Moved to a later day: an arrow instead of a checkbox. Clicking it undoes the mark.
 			row.addClass("is-carried");

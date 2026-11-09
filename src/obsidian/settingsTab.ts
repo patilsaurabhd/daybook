@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting, normalizePath } from "obsidian";
 import type DaybookPlugin from "../main";
 import { Weekday, weekdayName } from "../core/dates";
 import { cleanRoot } from "../core/paths";
+import { RulesModal } from "../ui/recurringModal";
 
 export class DaybookSettingTab extends PluginSettingTab {
 	constructor(app: App, private plugin: DaybookPlugin) {
@@ -49,6 +50,11 @@ export class DaybookSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings(false);
 				}),
 			);
+
+		new Setting(containerEl)
+			.setName("Recurring tasks")
+			.setDesc("Tasks that come back on a schedule, like paying rent or watering plants.")
+			.addButton((b) => b.setButtonText("Manage").onClick(() => new RulesModal(this.plugin).open()));
 
 		new Setting(containerEl)
 			.setName("Categories")
