@@ -1113,117 +1113,6 @@ body:not(.is-phone) .is-fill .daybook-notes.is-collapsed {
 	}
 }
 
-/* ---------- Sketch window ---------- */
-
-.daybook-sketch-modal {
-	width: min(900px, 95vw);
-}
-
-.daybook-sketch-bar {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--size-4-3);
-	margin-bottom: var(--size-4-2);
-}
-
-.daybook-sketch-group {
-	display: flex;
-	align-items: center;
-	gap: var(--size-2-2);
-	padding: 2px;
-	border-radius: var(--radius-m);
-	background-color: var(--background-modifier-hover);
-}
-
-.daybook-sketch-group button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 30px;
-	height: 30px;
-	padding: 0;
-	background: transparent;
-	border: none;
-	box-shadow: none;
-	border-radius: var(--radius-s);
-	color: var(--text-muted);
-	cursor: pointer;
-}
-
-.daybook-sketch-group button:hover {
-	background-color: var(--background-modifier-hover);
-	color: var(--text-normal);
-}
-
-.daybook-sketch-group button.is-active {
-	background-color: var(--background-primary);
-	box-shadow: var(--shadow-s);
-	color: var(--text-normal);
-}
-
-.daybook-swatch::before {
-	content: "";
-	width: 16px;
-	height: 16px;
-	border-radius: 50%;
-	background-color: var(--daybook-swatch);
-}
-
-.daybook-size-dot {
-	width: var(--daybook-size);
-	height: var(--daybook-size);
-	border-radius: 50%;
-	background-color: currentColor;
-}
-
-.daybook-sketch-tool svg {
-	width: 16px;
-	height: 16px;
-}
-
-svg.daybook-sketch-canvas {
-	display: block;
-	width: 100%;
-	height: min(60vh, 520px);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background-color: var(--background-primary);
-	touch-action: none;
-	cursor: crosshair;
-}
-
-.is-phone svg.daybook-sketch-canvas {
-	height: 60vh;
-}
-
-svg.daybook-sketch-canvas.is-erasing {
-	cursor: cell;
-}
-
-svg.daybook-sketch-canvas path {
-	fill: none;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-}
-
-svg.daybook-sketch-canvas path.daybook-ink {
-	stroke: var(--text-normal);
-}
-
-.daybook-sketch-footer {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	gap: var(--size-4-2);
-	margin-top: var(--size-4-3);
-}
-
-.daybook-sketch-hint {
-	margin-right: auto;
-	font-size: var(--font-ui-smaller);
-	color: var(--text-faint);
-}
-
 .daybook-mdbox-tools {
 	display: flex;
 	gap: var(--size-4-2);
@@ -2564,4 +2453,43 @@ body:not(.is-phone) .is-diary-hidden .daybook-pane-diary {
 
 .daybook-mini-task .daybook-moved-to {
 	cursor: inherit;
+}
+
+/* "How to use Daybook" */
+.daybook-help-modal h4 {
+	margin: var(--size-4-3) 0 var(--size-2-2);
+}
+
+.daybook-help-modal ul {
+	margin: 0;
+	padding-left: var(--size-4-5);
+	color: var(--text-muted);
+}
+
+.daybook-help-modal li {
+	margin-bottom: var(--size-2-2);
+}
+
+/* ---------- Phones ---------- */
+
+/* Header: title on top, controls on their own row; Focus/Event as icons. */
+.is-phone .daybook-title {
+	font-size: var(--h3-size);
+}
+
+.is-phone .daybook-nav {
+	width: 100%;
+	flex-wrap: wrap;
+	row-gap: var(--size-2-3);
+}
+
+.is-phone .daybook-focus-btn .daybook-focus-label,
+.is-phone .daybook-add-event > span:not(.daybook-layout-icon) {
+	display: none;
+}
+
+/* A wider grip, so a finger can pick a task up. */
+.is-phone .daybook-task-handle,
+.is-phone .daybook-task-handle-space {
+	width: 22px;
 }

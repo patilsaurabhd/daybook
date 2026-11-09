@@ -1,4 +1,4 @@
-import { Platform, Plugin, WorkspaceLeaf, debounce } from "obsidian";
+import { Notice, Platform, Plugin, WorkspaceLeaf, debounce } from "obsidian";
 import { todayKey } from "./core/dates";
 import { DEFAULT_SETTINGS, DaybookSettings, Selection } from "./core/types";
 import { VaultStore } from "./obsidian/store";
@@ -10,6 +10,12 @@ import { CalendarView, VIEW_TYPE_CALENDAR } from "./ui/calendarView";
 import { DaybookView, VIEW_TYPE_DAYBOOK } from "./ui/daybookView";
 import { newEvent } from "./ui/eventActions";
 import { RulesModal, openAddRule } from "./ui/recurringModal";
+import { GoToDateModal } from "./ui/goToDateModal";
+import { HelpModal } from "./ui/helpModal";
+import { PromptModal } from "./ui/promptModal";
+import { addCarried, applyDay, newTask, parseDay } from "./core/day";
+import { dayPath } from "./core/paths";
+import { cleanProjectName } from "./core/project";
 
 export default class DaybookPlugin extends Plugin {
 	settings: DaybookSettings = structuredClone(DEFAULT_SETTINGS);
@@ -96,6 +102,41 @@ export default class DaybookPlugin extends Plugin {
 			callback: () => openAddRule(this),
 		});
 		this.addCommand({
+			id: "go-to-date",
+			name: "Go to date…",
+			callback: () => new GoToDateModal(this.app, (date) => void this.open({ level: "day", date })).open(),
+		});
+		this.addCommand({
+			id: "quick-add-task",
+			name: "Quick add task to today",
+			callback: () => new PromptModal(this.app, "Add a task to today", "Call the bank", "Add", (text) => void this.quickAddTask(text)).open(),
+		});
+		this.addCommand({
+			id: "open-this-week",
+			name: "Open this week",
+			callback: () => void this.open({ level: "week", date: todayKey() }),
+		});
+		this.addCommand({
+			id: "open-this-month",
+			name: "Open this month",
+			callback: () => void this.open({ level: "month", date: todayKey() }),
+		});
+		this.addCommand({
+			id: "open-this-year",
+			name: "Open this year",
+			callback: () => void this.open({ level: "year", date: todayKey() }),
+		});
+		this.addCommand({
+			id: "new-project",
+			name: "New project",
+			callback: () => new PromptModal(this.app, "Start a project", "Project name", "Start", (name) => void this.newProject(name)).open(),
+		});
+		this.addCommand({
+			id: "help",
+			name: "How to use",
+			callback: () => new HelpModal(this.app).open(),
+		});
+		this.addCommand({
 			id: "show-calendar",
 			name: "Show calendar",
 			callback: () => void this.revealCalendar(),
@@ -168,6 +209,41 @@ export default class DaybookPlugin extends Plugin {
 		await workspace.revealLeaf(leaf);
 		// On phones the sidebar covers the screen; get it out of the way.
 		if (Platform.isMobile) workspace.rightSplit.collapse();
+	}
+
+	/** Adds a task to today's main card; today's note is created only now. */
+	private async quickAddTask(text: string): Promise<void> {
+		const task = text.trim();
+		if (!task) return;
+		try {
+			await this.store.write(
+				dayPath(this.settings.rootFolder, todayKey()),
+				(old) => {
+					const entry = parseDay(old);
+					addCarried(entry, [{ name: null, tasks: [newTask(task)] }]);
+					return applyDay(old, entry);
+				},
+				{ fromElsewhere: true }, // today's page may be open: let it reload
+			);
+			new Notice(`Added to today: ${task}`);
+		} catch (e) {
+			console.error("Daybook: could not add the task", e);
+			new Notice("Daybook could not add the task.");
+		}
+	}
+
+	/** Creates a project starting today, then shows today (where projects live). */
+	private async newProject(raw: string): Promise<void> {
+		const name = cleanProjectName(raw);
+		if (!name) return;
+		try {
+			await this.projects.create(name, todayKey());
+			await this.open({ level: "day", date: todayKey() });
+			new Notice(`Started ${name}. It's at the bottom of today's tasks.`);
+		} catch (e) {
+			console.error("Daybook: could not create project", e);
+			new Notice(`Daybook could not create the project "${name}".`);
+		}
 	}
 
 	/**

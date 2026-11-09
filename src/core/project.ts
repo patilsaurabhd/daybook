@@ -136,11 +136,6 @@ export function milestoneCardName(project: string, id: string, text: string): st
 	return alias ? `[[${project}#^${id}|${alias}]]` : `[[${project}#^${id}]]`;
 }
 
-/** Kept for older callers: the plain project card heading. */
-export function projectLink(name: string): string {
-	return projectCardName(name);
-}
-
 /** Gives a milestone a block id (from its text) if it has none; returns the id. */
 export function ensureMilestoneId(p: Project, index: number): string {
 	const m = p.milestones[index]!;

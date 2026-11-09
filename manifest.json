@@ -1,9 +1,10 @@
 {
 	"id": "daybook",
 	"name": "Daybook",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.7.2",
-	"description": "A planner and diary: a sidebar calendar opens editable day, week, month and year cards stored as plain Markdown.",
+	"description": "Plan your year, write your day, review your trips: tasks, goals and a diary in one calendar.",
 	"author": "Saurabh Patil",
+	"authorUrl": "https://github.com/patilsaurabhd",
 	"isDesktopOnly": false
 }

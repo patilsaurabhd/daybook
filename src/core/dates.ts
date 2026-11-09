@@ -73,10 +73,6 @@ export function daysInMonth(year: number, month: number): number {
 	return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-export function isLeapYear(year: number): boolean {
-	return daysInMonth(year, 2) === 29;
-}
-
 /** Adds months to a year/month pair. */
 export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
 	const index = year * 12 + (month - 1) + delta;

@@ -259,24 +259,6 @@ test("day notes scratchpad", () => {
 	assert.match(applyDay(withNotes, { ...parseDay(withNotes), notes: "" }), /## Diary\n\nd\n\n## Notes\n$/);
 });
 
-test("sketch svg round trip", async () => {
-	const { sketchToSvg, sketchFromSvg, strokePath, bounds } = await import("../src/core/sketch");
-	const sketch = {
-		strokes: [
-			{ color: "auto", width: 4, points: [[10, 10], [20, 15], [30, 10]] as [number, number][] },
-			{ color: "#e5484d", width: 2, points: [[50, 40]] as [number, number][] },
-		],
-	};
-	assert.equal(strokePath(sketch.strokes[0]!.points), "M10 10Q20 15 25 12.5L30 10");
-	assert.deepEqual(bounds(sketch.strokes), { x: 8, y: 8, w: 43, h: 33 });
-	const svg = sketchToSvg(sketch);
-	assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="-4 -4 67 57" width="67" height="57">/);
-	assert.match(svg, /<path class="ink" stroke-width="4" d="M10 10/);
-	assert.match(svg, /<path stroke="#e5484d"/);
-	assert.deepEqual(sketchFromSvg(svg), sketch);
-	assert.equal(sketchFromSvg("<svg><path d='M0 0'/></svg>"), null);
-});
-
 test("projects", async () => {
 	const P = await import("../src/core/project");
 	const { projectPath } = await import("../src/core/paths");

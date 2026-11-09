@@ -850,7 +850,7 @@ export class TaskBoard extends Component {
 				const target = parseDay(old);
 				addCarried(target, preview);
 				return applyDay(old, target);
-			});
+			}, { fromElsewhere: true }); // that day may be open in another tab
 		} catch (e) {
 			console.error("Daybook: could not move task", e);
 			new Notice("Daybook could not move the task.");
@@ -1084,7 +1084,7 @@ export class TaskBoard extends Component {
 /** Nearest ancestor that scrolls (the tasks pane on desktop, the page on phones). */
 function scrollParent(el: HTMLElement): HTMLElement | null {
 	for (let p = el.parentElement; p; p = p.parentElement) {
-		const overflow = getComputedStyle(p).overflowY;
+		const overflow = (p.ownerDocument.defaultView ?? activeWindow).getComputedStyle(p).overflowY;
 		if ((overflow === "auto" || overflow === "scroll") && p.scrollHeight > p.clientHeight) return p;
 	}
 	return null;

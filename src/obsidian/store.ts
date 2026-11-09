@@ -24,21 +24,29 @@ export class VaultStore {
 	 * Rewrites a file through `update(oldText)`. The file (and its folders)
 	 * is created on first write. Uses vault.process so the read-modify-write
 	 * is atomic with respect to other edits.
+	 *
+	 * With `{ fromElsewhere: true }` (a command or another view writing to a
+	 * note that may be open), the change isn't treated as the open page's own
+	 * save, so that page reloads and shows it.
 	 */
-	async write(path: string, update: (oldText: string) => string): Promise<void> {
+	async write(path: string, update: (oldText: string) => string, opts: { fromElsewhere?: boolean } = {}): Promise<void> {
 		const p = normalizePath(path);
+		const remember = (text: string) => {
+			if (opts.fromElsewhere) this.lastWritten.delete(p);
+			else this.lastWritten.set(p, text);
+		};
 		const existing = this.app.vault.getAbstractFileByPath(p);
 		if (existing instanceof TFile) {
 			await this.app.vault.process(existing, (old) => {
 				const next = update(old);
-				this.lastWritten.set(p, next);
+				remember(next);
 				return next;
 			});
 			return;
 		}
 		const next = update("");
 		await this.ensureFolder(p.split("/").slice(0, -1).join("/"));
-		this.lastWritten.set(p, next);
+		remember(next);
 		await this.app.vault.create(p, next);
 	}
 

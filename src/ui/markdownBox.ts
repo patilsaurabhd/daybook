@@ -3,12 +3,10 @@
 //
 // - Enter continues "- " and "1. " lists, Tab / Shift+Tab nest items.
 // - Optional images: paste, drag in, or use the "Add image" button.
-// - Optional sketches: "Sketch" opens a drawing window; click a sketch to edit it.
+//   (Images already in a note, including older sketch SVGs, render as usual.)
 // - Click the formatted text to edit; links still open as usual.
 
-import { App, Component, Keymap, MarkdownRenderer, Notice, TFile, moment, setIcon } from "obsidian";
-import { Sketch, sketchFromSvg, sketchToSvg } from "../core/sketch";
-import { SketchModal } from "./sketchModal";
+import { App, Component, Keymap, MarkdownRenderer, Notice, moment, setIcon } from "obsidian";
 import { listEnter, listIndent, TextEdit } from "../core/lists";
 import type { VaultStore } from "../obsidian/store";
 
@@ -26,8 +24,6 @@ export interface MarkdownBoxOptions {
 		/** Called before saving an image, so the note exists first. */
 		beforeSave: () => Promise<void>;
 	};
-	/** Adds a "Sketch" button (needs `images`). */
-	sketch?: boolean;
 }
 
 const IMAGE_TYPES: Record<string, string> = {
@@ -90,14 +86,6 @@ export class MarkdownBox extends Component {
 				picker.value = "";
 				void this.insertImages(files);
 			});
-
-			if (this.opts.sketch) {
-				const sketch = tools.createEl("button", { cls: "daybook-mdbox-add clickable-icon", attr: { "aria-label": "Draw a sketch" } });
-				setIcon(sketch, "pencil");
-				sketch.createSpan({ text: "Sketch" });
-				this.registerDomEvent(sketch, "mousedown", (evt) => evt.preventDefault());
-				this.registerDomEvent(sketch, "click", () => this.newSketch());
-			}
 		}
 
 		if (this.value.trim() === "") this.showEditor(false);
@@ -146,56 +134,7 @@ export class MarkdownBox extends Component {
 			return; // external links open normally
 		}
 		if (target.closest("input[type=checkbox]")) return;
-		// A Daybook sketch opens in the drawing window instead.
-		const embed = target.closest(".internal-embed");
-		const src = embed?.getAttr("src");
-		if (src && this.opts.images) {
-			const file = this.app.metadataCache.getFirstLinkpathDest(src, this.opts.sourcePath);
-			if (file && file.extension === "svg") {
-				evt.preventDefault();
-				void this.editSketch(file);
-				return;
-			}
-		}
 		this.showEditor(true);
-	}
-
-	// ---- Sketches ----
-
-	private newSketch(): void {
-		const images = this.opts.images;
-		if (!images) return;
-		new SketchModal(this.app, null, async (sketch: Sketch) => {
-			if (sketch.strokes.length === 0) return;
-			try {
-				await images.beforeSave();
-				const bytes = new TextEncoder().encode(sketchToSvg(sketch));
-				const name = `Sketch ${moment().format("YYYYMMDDHHmmss")}.svg`;
-				const embed = await images.store.saveAttachment(name, bytes.buffer, this.opts.sourcePath);
-				this.insertAtCaret(embed);
-				if (this.textarea.ownerDocument.activeElement !== this.textarea) this.showPreview();
-			} catch (e) {
-				console.error("Daybook: could not save sketch", e);
-				new Notice("Daybook could not save the sketch.");
-			}
-		}).open();
-	}
-
-	private async editSketch(file: TFile): Promise<void> {
-		const sketch = sketchFromSvg(await this.app.vault.read(file));
-		if (!sketch) {
-			this.showEditor(true); // some other SVG: just edit the text
-			return;
-		}
-		new SketchModal(this.app, sketch, async (edited: Sketch) => {
-			try {
-				await this.app.vault.process(file, () => sketchToSvg(edited));
-				this.showPreview();
-			} catch (e) {
-				console.error("Daybook: could not save sketch", e);
-				new Notice("Daybook could not save the sketch.");
-			}
-		}).open();
 	}
 
 	// ---- Editing ----

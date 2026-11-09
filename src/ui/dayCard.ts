@@ -393,7 +393,6 @@ export class DayCard extends Component {
 				this.changed();
 			},
 			images: { store: this.plugin.store, beforeSave: () => this.ensureNoteExists() },
-			sketch: true,
 		});
 	}
 

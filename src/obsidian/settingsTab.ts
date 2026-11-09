@@ -15,8 +15,8 @@ export class DaybookSettingTab extends PluginSettingTab {
 		const settings = this.plugin.settings;
 
 		new Setting(containerEl)
-			.setName("Root folder")
-			.setDesc("Folder for all planner notes. Existing notes are not moved if you change this.")
+			.setName("Notes folder")
+			.setDesc("Where day, week, month and year notes, projects, events and recurring tasks are kept. Changing it doesn't move existing notes.")
 			.addText((text) =>
 				text
 					.setPlaceholder("Daybook")
@@ -30,7 +30,7 @@ export class DaybookSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("First day of the week")
-			.setDesc("Used by the calendar and the week view.")
+			.setDesc("Used by the calendar and the week and month views.")
 			.addDropdown((dropdown) => {
 				for (let d = 0; d < 7; d++) {
 					dropdown.addOption(String(d), weekdayName(d as Weekday, undefined, "long"));
@@ -43,7 +43,7 @@ export class DaybookSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Carry over unfinished tasks automatically")
-			.setDesc("When you open today, all unfinished tasks from the last day you wrote move here without a review. Off: a bar lets you review and pick which ones to bring.")
+			.setDesc("When on, opening today moves every unfinished task from the last day you wrote, without asking. When off, a bar lets you review and pick.")
 			.addToggle((toggle) =>
 				toggle.setValue(settings.autoCarry).onChange(async (value) => {
 					settings.autoCarry = value;
@@ -53,12 +53,12 @@ export class DaybookSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Recurring tasks")
-			.setDesc("Tasks that come back on a schedule, like paying rent or watering plants.")
+			.setDesc("Tasks that come back on a schedule, like paying rent. Add, edit, pause or delete them.")
 			.addButton((b) => b.setButtonText("Manage").onClick(() => new RulesModal(this.plugin).open()));
 
 		new Setting(containerEl)
 			.setName("Categories")
-			.setDesc("A day belongs to a category when its tags property contains the category's tag. Used to colour the year view.")
+			.setDesc("Each category has a name, a tag and a colour. A day with that tag (or an event in that category) is coloured in the year view.")
 			.setHeading();
 
 		settings.categories.forEach((category, index) => {
