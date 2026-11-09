@@ -2407,3 +2407,94 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	height: 12px;
 	opacity: 0.7;
 }
+
+/* ---------- Goals on one line, the day's tags beside its heading ---------- */
+
+.daybook-goals {
+	flex: 1 1 auto;
+	padding-right: 0;
+}
+
+.daybook-goals-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-2-2);
+}
+
+.daybook-goals-head .daybook-pane-title {
+	margin-bottom: 0;
+}
+
+.daybook-tags-inline {
+	margin-left: auto;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.daybook-tag-chip {
+	--daybook-cat-color: var(--text-faint);
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: 1px var(--size-2-2) 1px var(--size-2-3);
+	border-radius: var(--radius-l);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.daybook-tag-chip.is-category {
+	color: var(--text-normal);
+	border-color: var(--daybook-cat-color);
+	background-color: color-mix(in srgb, var(--daybook-cat-color) 16%, transparent);
+}
+
+.daybook-tag-chip .daybook-chip-dot {
+	width: 7px;
+	height: 7px;
+	border-width: 0;
+	background-color: var(--daybook-cat-color);
+}
+
+.daybook-tag-remove {
+	display: inline-flex;
+	cursor: pointer;
+	opacity: 0.5;
+	border-radius: 50%;
+}
+
+.daybook-tag-remove:hover,
+.daybook-tag-remove:focus-visible {
+	opacity: 1;
+	outline: none;
+}
+
+.daybook-tag-remove svg,
+.daybook-tag-add svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-tag-add.clickable-icon {
+	padding: 2px;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 50%;
+}
+
+/* The goals box itself: a single line until there's more */
+.daybook-top {
+	padding-bottom: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+}
+
+.daybook-goals .daybook-mdbox textarea.daybook-mdbox-input {
+	min-height: 0;
+}
+
+.is-daybook-focus .daybook-tags-inline {
+	display: none;
+}

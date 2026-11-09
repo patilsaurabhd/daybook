@@ -2,7 +2,7 @@
 // Edits are saved shortly after you stop typing; the file is created on the
 // first keystroke, never just by looking at a day.
 
-import { Component, Notice, debounce, moment, setIcon } from "obsidian";
+import { Component, Menu, Notice, debounce, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
 import { DateKey, formatDate, todayKey } from "../core/dates";
 import { CarriedCard, DayEntry, addCarried, applyDay, emptyDay, listOpenTasks, openTasks, parseDay, takeOpenTasks } from "../core/day";
@@ -297,13 +297,17 @@ export class DayCard extends Component {
 			this.registerDomEvent(el, "focusout", () => void this.flush());
 		}
 
-		// Top row: goals (wide) with a narrow tags column beside it.
+		// Top: Goals, one line until you write more. The day's tags sit on the
+		// right of its heading, with a + to add more.
 		const top = el.createDiv({ cls: "daybook-top" });
 		const goals = top.createDiv({ cls: "daybook-goals" });
-		goals.createDiv({ cls: "daybook-pane-title", text: "Goals" });
+		const goalsHead = goals.createDiv({ cls: "daybook-goals-head" });
+		goalsHead.createDiv({ cls: "daybook-pane-title", text: "Goals" });
+		this.tagsEl = goalsHead.createDiv({ cls: "daybook-tags-inline" });
+		this.renderTags();
 		this.addBox(goals, {
 			value: this.entry.goals,
-			placeholder: "Goals for the day. Start a line with - or 1. for a list",
+			placeholder: "Goals for the day…",
 			label: "Goals for the day",
 			minRows: 1,
 			onChange: (v) => {
@@ -311,10 +315,6 @@ export class DayCard extends Component {
 				this.changed();
 			},
 		});
-
-		const tags = top.createDiv({ cls: "daybook-day-tags" });
-		tags.createDiv({ cls: "daybook-pane-title", text: "Tags" });
-		this.renderTags(tags.createDiv({ cls: "daybook-tag-list" }));
 
 		const panes = el.createDiv({ cls: "daybook-panes" });
 
@@ -409,64 +409,102 @@ export class DayCard extends Component {
 	}
 
 	/** Category buttons (from settings) plus a box for any other tags. */
-	private renderTags(row: HTMLElement): void {
-		const categories = this.plugin.settings.categories.filter((c) => c.tag.trim() !== "");
-		const isCategory = (tag: string) => categories.some((c) => same(c.tag, tag));
+	private tagsEl!: HTMLElement;
 
-		for (const cat of categories) {
-			const chip = row.createEl("button", {
-				cls: "daybook-chip",
-				attr: { "aria-pressed": "false", "aria-label": `Tag this day #${cat.tag}` },
-			});
-			chip.setCssProps({ "--daybook-cat-color": cat.color });
+	/** The day's tags as chips (× removes), and a + menu to add more. */
+	private renderTags(): void {
+		const row = this.tagsEl;
+		row.empty();
+		const categories = this.plugin.settings.categories.filter((c) => c.tag.trim() !== "");
+		const categoryOf = (tag: string) => categories.find((c) => same(c.tag, tag));
+
+		for (const tag of this.entry.tags) {
+			const cat = categoryOf(tag);
+			const chip = row.createSpan({ cls: "daybook-tag-chip" });
+			chip.toggleClass("is-category", cat !== undefined);
+			if (cat) chip.setCssProps({ "--daybook-cat-color": cat.color });
 			chip.createSpan({ cls: "daybook-chip-dot" });
-			chip.createSpan({ text: cat.name || cat.tag });
-			const sync = () => {
-				const on = this.entry.tags.some((t) => same(t, cat.tag));
-				chip.toggleClass("is-active", on);
-				chip.setAttr("aria-pressed", String(on));
-			};
-			sync();
-			chip.addEventListener("click", () => {
-				const on = this.entry.tags.some((t) => same(t, cat.tag));
-				this.entry.tags = on ? this.entry.tags.filter((t) => !same(t, cat.tag)) : [...this.entry.tags, cat.tag];
-				sync();
-				this.changed();
+			chip.createSpan({ text: cat ? cat.name || cat.tag : tag });
+			const x = chip.createSpan({ cls: "daybook-tag-remove", attr: { role: "button", tabindex: "0", "aria-label": `Remove tag ${tag}` } });
+			setIcon(x, "x");
+			const remove = () => this.setTag(tag, false);
+			x.addEventListener("click", remove);
+			x.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					remove();
+				}
 			});
 		}
 
-		// "+": make a new category and tag this day with it.
-		const plus = row.createEl("button", { cls: "daybook-chip daybook-chip-add", attr: { "aria-label": "New category" } });
+		const plus = row.createDiv({
+			cls: "clickable-icon daybook-tag-add",
+			attr: { role: "button", tabindex: "0", "aria-label": this.entry.tags.length ? "Add a tag" : "Tag this day" },
+		});
 		setIcon(plus, "plus");
-		plus.addEventListener("click", () => {
-			new CategoryModal(this.plugin, async (name, colour) => {
-				const tag = tagFromName(name);
-				if (!tag) return;
-				// Tag the day and save first: adding the category redraws the page.
-				if (!this.entry.tags.some((t) => same(t, tag))) this.entry.tags.push(tag);
-				this.dirty = true;
-				await this.flush();
-				await addCategory(this.plugin, name, colour);
-			}).open();
+		const open = (evt: MouseEvent | KeyboardEvent) => {
+			const menu = new Menu();
+			for (const cat of categories) {
+				const on = this.entry.tags.some((t) => same(t, cat.tag));
+				menu.addItem((i) =>
+					i
+						.setTitle(cat.name || cat.tag)
+						.setChecked(on)
+						.onClick(() => this.setTag(cat.tag, !on)),
+				);
+			}
+			if (categories.length) menu.addSeparator();
+			menu.addItem((i) =>
+				i
+					.setTitle("Other tag…")
+					.setIcon("hash")
+					.onClick(() =>
+						new PromptModal(this.plugin.app, "Tag this day", "family", "Add", (raw) => {
+							for (const t of raw.split(/[,\s]+/)) {
+								const tag = t.replace(/^#/, "").trim();
+								if (tag) this.setTag(tag, true);
+							}
+						}).open(),
+					),
+			);
+			menu.addItem((i) =>
+				i
+					.setTitle("New category…")
+					.setIcon("palette")
+					.onClick(() =>
+						new CategoryModal(this.plugin, async (name, colour) => {
+							const tag = tagFromName(name);
+							if (!tag) return;
+							// Tag the day and save first: adding the category redraws the page.
+							if (!this.entry.tags.some((t) => same(t, tag))) this.entry.tags.push(tag);
+							this.dirty = true;
+							await this.flush();
+							await addCategory(this.plugin, name, colour);
+						}).open(),
+					),
+			);
+			if (evt instanceof MouseEvent) menu.showAtMouseEvent(evt);
+			else {
+				const r = plus.getBoundingClientRect();
+				menu.showAtPosition({ x: r.left, y: r.bottom });
+			}
+		};
+		plus.addEventListener("click", open);
+		plus.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				open(e);
+			}
 		});
+	}
 
-		const other = row.createEl("input", {
-			cls: "daybook-tags",
-			type: "text",
-			attr: {
-				placeholder: categories.length ? "Other tags" : "Tags (comma separated)",
-				"aria-label": "Other tags",
-			},
-		});
-		other.value = this.entry.tags.filter((t) => !isCategory(t)).join(", ");
-		other.addEventListener("input", () => {
-			const extra = other.value
-				.split(/[,\s]+/)
-				.map((t) => t.replace(/^#/, "").trim())
-				.filter(Boolean);
-			this.entry.tags = [...this.entry.tags.filter(isCategory), ...extra];
-			this.changed();
-		});
+	private setTag(tag: string, on: boolean): void {
+		const has = this.entry.tags.some((t) => same(t, tag));
+		if (on && !has) this.entry.tags = [...this.entry.tags, tag];
+		else if (!on && has) this.entry.tags = this.entry.tags.filter((t) => !same(t, tag));
+		else return;
+		this.changed();
+		this.renderTags();
 	}
 }
 
