@@ -2,7 +2,7 @@
 
 import { App, Menu, Modal, Notice, Setting, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { DateKey, formatDate, isDateKey } from "../core/dates";
+import { DateKey, formatDate, isDateKey, todayKey } from "../core/dates";
 import { DayEvent, EventRepeat, dayOf, eventCategory, orderRange } from "../core/event";
 import { CategoryModal, addCategory } from "./categoryModal";
 
@@ -48,6 +48,13 @@ function repeatValue(r: EventRepeat | null | undefined): string {
 /** "every year", "every 2 weeks" (for labels). */
 export function repeatLabel(r: EventRepeat): string {
 	return r.n === 1 ? `every ${r.unit}` : `every ${r.n} ${r.unit}s`;
+}
+
+/** "every year · until 30 Jun 2028" for a repeating event. */
+export function seriesLabel(e: DayEvent): string {
+	if (!e.repeats) return "";
+	const until = e.until ? ` · until ${formatDate(e.until, { day: "numeric", month: "short", year: "numeric" }, moment.locale())}` : "";
+	return `${repeatLabel(e.repeats)}${until}`;
 }
 
 class EventModal extends Modal {
@@ -175,6 +182,68 @@ class EventModal extends Modal {
 	}
 }
 
+/** "Stop repeating…": the last date the event happens; later ones disappear. */
+class StopModal extends Modal {
+	private date: DateKey;
+
+	constructor(
+		private plugin: DaybookPlugin,
+		private event: DayEvent,
+	) {
+		super(plugin.app);
+		this.date = event.until || todayKey();
+	}
+
+	onOpen(): void {
+		this.setTitle(`Stop repeating ${this.event.name}`);
+		const { contentEl } = this;
+		contentEl.createEl("p", {
+			text: "Pick the last date it can happen. Times after that disappear; earlier ones stay. Nothing in your day notes changes.",
+		});
+		new Setting(contentEl).setName("Last date").addText((t) => {
+			t.inputEl.type = "date";
+			t.setValue(this.date).onChange((v) => (this.date = v));
+		});
+		const s = new Setting(contentEl);
+		if (this.event.until) {
+			s.addButton((b) => b.setButtonText("Keep repeating (no end)").onClick(() => this.save("")));
+		}
+		s.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()));
+		s.addButton((b) =>
+			b
+				.setButtonText("Stop after this date")
+				.setCta()
+				.onClick(() => {
+					if (!isDateKey(this.date)) {
+						new Notice("Pick a date.");
+						return;
+					}
+					this.save(this.date);
+				}),
+		);
+	}
+
+	private save(until: DateKey): void {
+		this.close();
+		const name = this.event.name;
+		void this.plugin.events
+			.update(name, (x) => {
+				x.until = until;
+			})
+			.then(() =>
+				new Notice(until ? `${name} now stops after ${formatDate(until, { day: "numeric", month: "short", year: "numeric" }, moment.locale())}.` : `${name} repeats with no end.`),
+			)
+			.catch((err: unknown) => {
+				console.error("Daybook: could not update event", err);
+				new Notice("Daybook could not update the event.");
+			});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
 class ConfirmModal extends Modal {
 	constructor(
 		app: App,
@@ -253,6 +322,14 @@ export function showEventMenu(plugin: DaybookPlugin, e: DayEvent, evt: MouseEven
 				}).open(),
 			),
 	);
+	if (e.repeats) {
+		menu.addItem((i) =>
+			i
+				.setTitle(e.until ? "Change when it stops…" : "Stop repeating…")
+				.setIcon("calendar-x")
+				.onClick(() => new StopModal(plugin, e).open()),
+		);
+	}
 	menu.addItem((i) =>
 		i
 			.setTitle(e.repeats ? "Delete event (every time)" : "Delete event")
@@ -296,6 +373,6 @@ export function renderEventBanner(plugin: DaybookPlugin, parent: HTMLElement, e:
 	b.createSpan({ cls: "daybook-event-name", text: e.name });
 	const { day, total } = dayOf(e, date);
 	const when = total > 1 ? `day ${day} of ${total} · ${eventRangeLabel(e)}` : eventRangeLabel(e);
-	b.createSpan({ cls: "daybook-event-when", text: e.repeats ? `${when} · ${repeatLabel(e.repeats)}` : when });
+	b.createSpan({ cls: "daybook-event-when", text: e.repeats ? `${when} · ${seriesLabel(e)}` : when });
 	b.addEventListener("click", (evt) => showEventMenu(plugin, e, evt));
 }

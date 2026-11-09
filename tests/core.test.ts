@@ -599,3 +599,15 @@ test("moved tasks remember where they went", async () => {
 	back.groups[0]!.tasks[0]!.carried = false;
 	assert.match(D.applyDay("", back), /- \[ \] report \^r1\n/);
 });
+
+test("year in numbers", async () => {
+	const Y = await import("../src/core/year");
+	const s = Y.yearStats(["2026-03-01", "2026-03-02", "2026-03-03", "2026-03-02", "2026-06-10", "2026-06-11", "2025-12-31", "2027-01-01"], 2026);
+	assert.equal(s.days, 5); // duplicates and other years ignored
+	assert.deepEqual(s.byMonth, [0, 0, 3, 0, 0, 2, 0, 0, 0, 0, 0, 0]);
+	assert.equal(s.longest, 3);
+	assert.equal(s.longestFrom, "2026-03-01");
+	// A run across a month end counts as one
+	assert.equal(Y.yearStats(["2026-01-31", "2026-02-01"], 2026).longest, 2);
+	assert.deepEqual(Y.yearStats([], 2026), { days: 0, byMonth: Array(12).fill(0), longest: 0, longestFrom: null });
+});

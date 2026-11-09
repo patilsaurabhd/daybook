@@ -1,6 +1,6 @@
 // Year grid: 12 rows of day boxes coloured by category. Pure logic.
 
-import { DateKey, daysInMonth, toKey } from "./dates";
+import { DateKey, addDays, daysInMonth, toKey } from "./dates";
 import { Category } from "./types";
 
 export interface YearRow {
@@ -50,4 +50,40 @@ export function boxFill(colours: string[]): string | null {
 	const step = 100 / colours.length;
 	const stops = colours.map((c, i) => `${c} ${Math.round(i * step)}% ${Math.round((i + 1) * step)}%`);
 	return `linear-gradient(135deg, ${stops.join(", ")})`;
+}
+
+/** "Year in numbers" for one set of days (a category, or one event's days). */
+export interface YearStats {
+	/** Distinct days in the year. */
+	days: number;
+	/** Days per month, January first. */
+	byMonth: number[];
+	/** Longest run of days in a row, and where it starts. */
+	longest: number;
+	longestFrom: DateKey | null;
+}
+
+export function yearStats(dates: Iterable<DateKey>, year: number): YearStats {
+	const prefix = `${year}-`;
+	const sorted = [...new Set([...dates].filter((d) => d.startsWith(prefix)))].sort();
+	const byMonth = Array.from({ length: 12 }, () => 0);
+	let longest = 0;
+	let longestFrom: DateKey | null = null;
+	let run = 0;
+	let runFrom: DateKey | null = null;
+	let prev: DateKey | null = null;
+	for (const d of sorted) {
+		byMonth[Number(d.slice(5, 7)) - 1]!++;
+		if (prev !== null && addDays(prev, 1) === d) run++;
+		else {
+			run = 1;
+			runFrom = d;
+		}
+		if (run > longest) {
+			longest = run;
+			longestFrom = runFrom;
+		}
+		prev = d;
+	}
+	return { days: sorted.length, byMonth, longest, longestFrom };
 }

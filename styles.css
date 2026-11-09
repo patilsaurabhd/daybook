@@ -2493,3 +2493,182 @@ body:not(.is-phone) .is-diary-hidden .daybook-pane-diary {
 .is-phone .daybook-task-handle-space {
 	width: 22px;
 }
+
+/* ---------- Week page fills the window (desktop) ---------- */
+
+body:not(.is-phone) .is-fill .daybook-week {
+	flex: 1 1 auto;
+	grid-auto-rows: minmax(150px, 1fr);
+}
+
+body:not(.is-phone) .is-fill .daybook-week .daybook-mini {
+	overflow: hidden;
+}
+
+/* ---------- Year in numbers ---------- */
+
+.daybook-year-numbers {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	max-width: 720px;
+}
+
+.daybook-stat-rows {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+}
+
+.daybook-stat-row {
+	--daybook-cat-color: var(--text-faint);
+	display: grid;
+	grid-template-columns: auto minmax(5em, 9em) 1fr auto;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-2-1) var(--size-2-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+.daybook-stat-row:hover,
+.daybook-stat-row:focus-visible {
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+.daybook-stat-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-stat-bar {
+	height: 8px;
+	border-radius: 4px;
+	background-color: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.daybook-stat-fill {
+	width: var(--daybook-share);
+	height: 100%;
+	border-radius: 4px;
+	background-color: var(--daybook-cat-color);
+}
+
+.daybook-stat-value {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.daybook-stat-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: var(--size-4-2);
+}
+
+.daybook-stat-tile {
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+}
+
+.daybook-stat-big {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-bold);
+	font-variant-numeric: tabular-nums;
+}
+
+.daybook-stat-caption {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.daybook-month-bars {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: var(--size-2-2);
+	align-items: end;
+	height: 110px;
+}
+
+.daybook-month-bar {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: center;
+	height: 100%;
+	gap: 2px;
+}
+
+.daybook-month-bar-fill {
+	width: 100%;
+	max-width: 28px;
+	height: var(--daybook-share);
+	min-height: 2px;
+	border-radius: 3px 3px 0 0;
+	background-color: var(--daybook-cat-color);
+}
+
+.daybook-month-bar-value,
+.daybook-month-bar-label {
+	font-size: 0.7em;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Year: collapsible event list ---------- */
+
+.daybook-event-list {
+	display: flex;
+	flex-direction: column;
+	max-width: 720px;
+}
+
+.daybook-event-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-2-2) var(--size-2-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+.daybook-event-row:hover,
+.daybook-event-row:focus-visible,
+.daybook-event-row.is-picked {
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+.daybook-event-row-name {
+	font-weight: var(--font-semibold);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-event-row-when,
+.daybook-event-row-days {
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.daybook-event-row .clickable-icon {
+	padding: 2px;
+}
+
+@container (max-width: 560px) {
+	.daybook-event-row {
+		grid-template-columns: auto minmax(0, 1fr) auto auto;
+	}
+
+	.daybook-event-row-days {
+		display: none;
+	}
+}

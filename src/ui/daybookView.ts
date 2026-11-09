@@ -200,7 +200,8 @@ export class DaybookView extends ItemView {
 		const el = this.contentEl;
 		el.empty();
 		// Day page fills the window: goals on top, tasks/diary in the middle, notes at the bottom.
-		el.toggleClass("is-fill", this.level === "day");
+		// Day and week pages fill the window on desktop (cards stretch to the bottom).
+		el.toggleClass("is-fill", this.level === "day" || this.level === "week");
 		if (this.plugin.focusMode && this.level !== "day") this.plugin.exitFocus();
 		this.renderHeader(el);
 		this.applyFocus();
@@ -366,8 +367,23 @@ export class DaybookView extends ItemView {
 	/** "November" link to the month view. */
 	private monthLink(parent: HTMLElement, date: DateKey): void {
 		const { month } = parseKey(date);
-		const link = parent.createSpan({ cls: "daybook-link", text: monthName(month, moment.locale()), attr: { role: "button", tabindex: "0" } });
-		link.addEventListener("click", () => this.navigate("month", date));
+		this.upLink(parent, monthName(month, moment.locale()), "month", date);
+	}
+
+	/** "2026" link to the year view. */
+	private yearLink(parent: HTMLElement, date: DateKey): void {
+		this.upLink(parent, String(parseKey(date).year), "year", date);
+	}
+
+	private upLink(parent: HTMLElement, text: string, level: ZoomLevel, date: DateKey): void {
+		const link = parent.createSpan({ cls: "daybook-link", text, attr: { role: "button", tabindex: "0", "aria-label": `Open ${level}` } });
+		link.addEventListener("click", () => this.navigate(level, date));
+		link.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				this.navigate(level, date);
+			}
+		});
 	}
 
 	private renderHeader(el: HTMLElement): void {
@@ -386,6 +402,7 @@ export class DaybookView extends ItemView {
 			});
 			weekLink.addEventListener("click", () => this.navigate("week", this.date));
 			this.monthLink(sub, this.date);
+			this.yearLink(sub, this.date);
 			if (this.date === todayKey()) sub.createSpan({ cls: "daybook-today-badge", text: "Today" });
 			const events = eventsOn(this.plugin.events.between(this.date, this.date), this.date);
 			if (events.length) {
@@ -396,12 +413,13 @@ export class DaybookView extends ItemView {
 			const days = weekDays(this.date, this.plugin.settings.firstDayOfWeek);
 			const sub = titleWrap.createDiv({ cls: "daybook-subtitle" });
 			sub.createSpan({ text: formatRange(days[0]!, days[6]!, moment.locale()) });
-			this.monthLink(sub, days.find((d) => d.slice(0, 7) === this.date.slice(0, 7)) ?? this.date);
+			const inMonth = days.find((d) => d.slice(0, 7) === this.date.slice(0, 7)) ?? this.date;
+			this.monthLink(sub, inMonth);
+			this.yearLink(sub, inMonth);
 			if (days.includes(todayKey())) sub.createSpan({ cls: "daybook-today-badge", text: "This week" });
 		} else if (this.level === "month") {
 			const sub = titleWrap.createDiv({ cls: "daybook-subtitle" });
-			const yearLink = sub.createSpan({ cls: "daybook-link", text: String(parseKey(this.date).year), attr: { role: "button", tabindex: "0" } });
-			yearLink.addEventListener("click", () => this.navigate("year", this.date));
+			this.yearLink(sub, this.date);
 			if (this.date.slice(0, 7) === todayKey().slice(0, 7)) sub.createSpan({ cls: "daybook-today-badge", text: "This month" });
 		} else if (this.level === "year" && this.date.slice(0, 4) === todayKey().slice(0, 4)) {
 			titleWrap.createDiv({ cls: "daybook-subtitle" }).createSpan({ cls: "daybook-today-badge", text: "This year" });

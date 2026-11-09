@@ -35,6 +35,8 @@ export default class DaybookPlugin extends Plugin {
 	taskFilter = "all";
 	/** Days where the carry-over bar was dismissed this session. */
 	carryDismissed = new Set<string>();
+	/** Year view: the events list is open. Session only. */
+	yearEventsOpen = false;
 	/** Year view: category tag to highlight, or "all". Session only. */
 	yearHighlight = "all";
 	/** Both layout: projects opened this time (they start collapsed). Session only. */

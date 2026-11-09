@@ -42,6 +42,13 @@ export class CompactDayCard {
 		});
 	}
 
+	/** How many tasks to list before "+N more". Returns true if it changed. */
+	setMaxRows(n: number): boolean {
+		if (n === this.opts.maxRows) return false;
+		this.opts.maxRows = n;
+		return true;
+	}
+
 	async refresh(): Promise<void> {
 		const text = await this.plugin.store.read(this.path);
 		const entry = text === null ? null : parseDay(text);

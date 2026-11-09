@@ -1,7 +1,7 @@
 // Week and month levels: grids of compact day cards. Clicking a card opens
 // the day out in place for quick task editing; ↗ goes to the day page.
 
-import { Component, moment } from "obsidian";
+import { Component, debounce, moment } from "obsidian";
 import type DaybookPlugin from "../main";
 import { DateKey, parseKey, weekDays, weekdayName } from "../core/dates";
 import { monthGrid, weekdayOrder } from "../core/calendar";
@@ -140,6 +140,21 @@ export class WeekBoard extends CompactBoard {
 		this.host = this.containerEl.createDiv({ cls: "daybook-week" });
 		for (const day of weekDays(this.date, this.plugin.settings.firstDayOfWeek)) this.addCard(this.host, day, 6);
 		await this.refreshAll();
+		// Taller cards (e.g. with the sidebars closed) list more tasks.
+		window.requestAnimationFrame(() => void this.fitRows());
+		const refit = debounce(() => void this.fitRows(), 250, true);
+		this.registerDomEvent(window, "resize", refit);
+	}
+
+	/** Shows as many task rows as the cards have room for (6 at least). */
+	private async fitRows(): Promise<void> {
+		const card = this.cards.values().next().value;
+		if (!card) return;
+		const height = card.el.clientHeight;
+		const rows = Math.max(6, Math.min(30, Math.floor((height - 64) / 20)));
+		let changed = false;
+		for (const c of this.cards.values()) changed = c.setMaxRows(rows) || changed;
+		if (changed) await Promise.all([...this.cards.values()].map((c) => c.refresh()));
 	}
 }
 
