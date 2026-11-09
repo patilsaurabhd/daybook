@@ -9,6 +9,7 @@
 //   - Passport renewal | yearly on 03-14
 //   - Stretch | daily | from: 2026-11-09
 //   - Backup | every 3 days | from: 2026-11-09 | paused
+//   - Course | weekly on tue | from: 2026-11-09 | until: 2026-12-15
 //
 // The Daybook dialog writes these lines, so nobody has to type them.
 // On a day where a rule is due, its task shows up (not yet written); the
@@ -18,6 +19,7 @@
 import { DateKey, Weekday, addDays, daysInMonth, isDateKey, parseKey, weekday } from "./dates";
 import { DayEntry, Task, addCarried, newTask } from "./day";
 import { joinFrontmatter, readSection, splitFrontmatter, writeSection } from "./markdown";
+import { parseCardLink } from "./project";
 
 export type Frequency =
 	| { kind: "daily" }
@@ -34,7 +36,28 @@ export interface Rule {
 	card: string | null;
 	/** First day the rule applies (also the anchor for "every N"); "" = no start date. */
 	from: DateKey;
+	/** Last day it can appear; "" = no end. */
+	until: DateKey;
 	paused: boolean;
+}
+
+/**
+ * A card heading safe to write in a rule line. Rule parts are separated by
+ * "|", so a project or milestone card is stored by its link alone, without
+ * its display alias: "[[dpu#^abc|abc]]" -> "[[dpu#^abc]]". Matching finds the
+ * day's card by what it links to (see addRuleTasks).
+ */
+export function ruleCard(card: string | null): string | null {
+	if (!card) return null;
+	const link = parseCardLink(card);
+	if (link?.milestoneId) return `[[${link.project}#^${link.milestoneId}]]`;
+	if (link) return link.title ? `[[${link.project}]] ${link.title.replace(/\|/g, "/")}` : `[[${link.project}]]`;
+	return card.replace(/\|/g, "/").trim() || null;
+}
+
+/** Repairs cards saved by an older version, where "[[p#^id|alias]]" became "[[p#^id/alias]]". */
+function repairCard(card: string): string {
+	return card.replace(/^(\[\[[^\]#|]+#\^[A-Za-z0-9-]+)\/[^\]]*\]\]/, "$1]]");
 }
 
 export const RECURRING_HEADING = "Recurring";
@@ -106,11 +129,14 @@ export function parseRule(line: string): Rule | null {
 	const text = parts[0] ?? "";
 	const freq = parseFrequency(parts[1] ?? "");
 	if (!text || !freq) return null;
-	const rule: Rule = { text, freq, card: null, from: "", paused: false };
+	const rule: Rule = { text, freq, card: null, from: "", until: "", paused: false };
 	for (const p of parts.slice(2)) {
-		const kv = /^(card|from)\s*:\s*(.+)$/i.exec(p);
-		if (kv && kv[1]!.toLowerCase() === "card") rule.card = kv[2]!.trim();
-		else if (kv && isDateKey(kv[2]!.trim())) rule.from = kv[2]!.trim();
+		const kv = /^(card|from|until)\s*:\s*(.+)$/i.exec(p);
+		const key = kv?.[1]!.toLowerCase();
+		const value = kv?.[2]!.trim() ?? "";
+		if (key === "card") rule.card = repairCard(value);
+		else if (key === "from" && isDateKey(value)) rule.from = value;
+		else if (key === "until" && isDateKey(value)) rule.until = value;
 		else if (p.toLowerCase() === "paused") rule.paused = true;
 	}
 	return rule;
@@ -118,8 +144,10 @@ export function parseRule(line: string): Rule | null {
 
 export function formatRule(r: Rule): string {
 	const parts = [r.text.replace(/\|/g, "/").trim(), formatFrequency(r.freq)];
-	if (r.card) parts.push(`card: ${r.card.replace(/\|/g, "/").trim()}`);
+	const card = ruleCard(r.card);
+	if (card) parts.push(`card: ${card}`);
 	if (r.from) parts.push(`from: ${r.from}`);
+	if (r.until) parts.push(`until: ${r.until}`);
 	if (r.paused) parts.push("paused");
 	return `- ${parts.join(" | ")}`;
 }
@@ -161,6 +189,7 @@ function daysBetween(a: DateKey, b: DateKey): number {
 export function isDue(r: Rule, date: DateKey): boolean {
 	if (r.paused) return false;
 	if (r.from && date < r.from) return false;
+	if (r.until && date > r.until) return false;
 	const { year, month, day } = parseKey(date);
 	const f = r.freq;
 	switch (f.kind) {
@@ -238,9 +267,30 @@ export function addRuleTasks(entry: DayEntry, rules: Rule[]): Task[] {
 	const added: Task[] = [];
 	for (const r of rules) {
 		const task = newTask(r.text);
-		addCarried(entry, [{ name: r.card, tasks: [task] }]);
+		addCarried(entry, [{ name: cardIn(entry, r.card), tasks: [task] }]);
 		entry.recurring.push(ruleId(r));
 		added.push(task);
 	}
 	return added;
+}
+
+/**
+ * The heading of the day's card a rule's task goes into. A project or
+ * milestone card is found by what it links to, whatever its display text;
+ * other cards by name (a missing card is created with the rule's heading).
+ */
+function cardIn(entry: DayEntry, card: string | null): string | null {
+	if (!card) return null;
+	const want = parseCardLink(card);
+	if (!want) return card;
+	const same = entry.groups.find((g) => {
+		const have = parseCardLink(g.name);
+		return (
+			have !== null &&
+			have.project.toLowerCase() === want.project.toLowerCase() &&
+			have.milestoneId === want.milestoneId &&
+			(want.milestoneId !== null || have.title.toLowerCase() === want.title.toLowerCase())
+		);
+	});
+	return same?.name ?? card;
 }

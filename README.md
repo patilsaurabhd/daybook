@@ -12,7 +12,7 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 - **Week and month overviews you can edit in place.** Each day is a small card with its first tasks. Click one to add or tick tasks without leaving the overview. Weeks, months and years have their own goals and a reflection box.
 - **A year at a glance.** Every day as a box, coloured by category (Work, Health, Travel or your own), with a legend to highlight one category.
 - **Multi-day and repeating events.** Drag across days to add a trip or a conference. Events can repeat every week, month or year, and show in every view.
-- **Recurring tasks.** "Pay rent, every month on the 1st." They appear on the days they're due. A day that a month doesn't have (the 31st, 29 February) falls on its last day.
+- **Recurring tasks.** "Pay rent, every month on the 1st." They appear on the days they're due, can end on a date, and can be paused or stopped from the task itself. A day that a month doesn't have (the 31st, 29 February) falls on its last day.
 - **Carry-over and move to date.** Review yesterday's unfinished tasks and bring the ones you want into today, or move any task to another date. The old day shows where it went.
 - **Projects with milestones.** A project stays on your day pages until it's finished, with a milestone checklist, a progress bar and its own task cards. A milestone can tick itself when its card is done.
 - **Focus mode.** One day, only your open tasks and the diary, with no sidebars.

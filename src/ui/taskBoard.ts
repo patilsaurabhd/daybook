@@ -43,7 +43,7 @@ import {
 	sameName,
 } from "../core/project";
 import { ProjectPanel } from "./projectPanel";
-import { RulesModal, openAddRule } from "./recurringModal";
+import { RulesModal, StopRuleModal, openAddRule } from "./recurringModal";
 import { Rule, ruleId } from "../core/recurring";
 
 /** Project rows are shown only when the board gets this (the day page). */
@@ -787,14 +787,18 @@ export class TaskBoard extends Component {
 		setIcon(more, "more-horizontal");
 		const open = (evt: MouseEvent) => {
 			evt.preventDefault();
-			this.showTaskMenu(evt, task, gi, ti);
+			void this.showTaskMenu(evt, task, gi, ti);
 		};
 		more.addEventListener("click", open);
 		handle.addEventListener("contextmenu", open);
 	}
 
-	private showTaskMenu(evt: MouseEvent, task: Task, gi: number, ti: number): void {
+	private async showTaskMenu(evt: MouseEvent, task: Task, gi: number, ti: number): Promise<void> {
 		const group = this.groups[gi]!;
+		const at = { x: evt.clientX, y: evt.clientY };
+		// Is this task one of the recurring rules? Then offer to stop it instead.
+		const key = task.text.trim().toLowerCase();
+		const rule = key ? (await this.plugin.recurring.rules()).find((r) => ruleId(r) === key) : undefined;
 		const menu = new Menu();
 		menu.addItem((i) =>
 			i
@@ -803,18 +807,27 @@ export class TaskBoard extends Component {
 				.setDisabled(!isOpen(task))
 				.onClick(() => this.moveToDate(gi, ti)),
 		);
-		menu.addItem((i) =>
-			i
-				.setTitle("Make recurring…")
-				.setIcon("repeat")
-				.setDisabled(!task.text.trim())
-				.onClick(() => {
-					const from = this.projectCtx?.date ?? todayKey();
-					const prefill: Rule = { text: task.text.trim(), freq: { kind: "daily" }, card: group.name, from, paused: false };
-					openAddRule(this.plugin, (rule) => this.projectCtx?.recordRule?.(ruleId(rule)), prefill);
-				}),
-		);
-		menu.showAtMouseEvent(evt);
+		if (rule) {
+			menu.addItem((i) =>
+				i
+					.setTitle("Stop recurring…")
+					.setIcon("calendar-x")
+					.onClick(() => new StopRuleModal(this.plugin, rule, this.projectCtx?.date ?? todayKey()).open()),
+			);
+		} else {
+			menu.addItem((i) =>
+				i
+					.setTitle("Make recurring…")
+					.setIcon("repeat")
+					.setDisabled(!task.text.trim())
+					.onClick(() => {
+						const from = this.projectCtx?.date ?? todayKey();
+						const prefill: Rule = { text: task.text.trim(), freq: { kind: "daily" }, card: group.name, from, until: "", paused: false };
+						openAddRule(this.plugin, (r) => this.projectCtx?.recordRule?.(ruleId(r)), prefill);
+					}),
+			);
+		}
+		menu.showAtPosition(at);
 	}
 
 	private focus(f: Focus): void {

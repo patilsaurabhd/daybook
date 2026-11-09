@@ -6,7 +6,7 @@ import type DaybookPlugin from "../main";
 import { Weekday, formatDate, monthName, todayKey, weekday, weekdayName } from "../core/dates";
 import { weekdayOrder } from "../core/calendar";
 import { Frequency, Rule, describe, formatRule, nextDue } from "../core/recurring";
-import { projectCardName } from "../core/project";
+import { parseCardLink, projectCardName } from "../core/project";
 
 type Kind = Frequency["kind"];
 
@@ -24,8 +24,13 @@ export function describeRule(r: Rule): string {
 	return describe(r, (d) => weekdayName(d, locale, "short"), (m) => monthName(m, locale, "short"));
 }
 
+function untilLabel(r: Rule): string {
+	return r.until ? `until ${formatDate(r.until, { day: "numeric", month: "short", year: "numeric" }, moment.locale())}` : "";
+}
+
 function nextLabel(r: Rule): string {
 	if (r.paused) return "Paused";
+	if (r.until && r.until < todayKey()) return "Ended";
 	const next = nextDue(r, todayKey());
 	if (!next) return "Not due in the next two years";
 	return `Next: ${formatDate(next, { weekday: "short", day: "numeric", month: "short", year: next.slice(0, 4) === todayKey().slice(0, 4) ? undefined : "numeric" }, moment.locale())}`;
@@ -55,7 +60,7 @@ export class RuleModal extends Modal {
 	) {
 		super(plugin.app);
 		const today = todayKey();
-		this.rule = initial ? structuredClone(initial) : { text: "", freq: { kind: "daily" }, card: null, from: today, paused: false };
+		this.rule = initial ? structuredClone(initial) : { text: "", freq: { kind: "daily" }, card: null, from: today, until: "", paused: false };
 		// Weekly/monthly/yearly choices start from the rule's first day.
 		const anchor = this.rule.from || today;
 		const [, m, d] = anchor.split("-").map(Number);
@@ -105,6 +110,17 @@ export class RuleModal extends Modal {
 				t.inputEl.type = "date";
 				t.setValue(this.rule.from).onChange((v) => {
 					this.rule.from = v;
+					this.updateSummary();
+				});
+			});
+
+		new Setting(contentEl)
+			.setName("Ends on")
+			.setDesc("Optional. Nothing appears after this day. Leave empty to keep it going.")
+			.addText((t) => {
+				t.inputEl.type = "date";
+				t.setValue(this.rule.until).onChange((v) => {
+					this.rule.until = v;
 					this.updateSummary();
 				});
 			});
@@ -264,7 +280,8 @@ export class RuleModal extends Modal {
 
 	private updateSummary(): void {
 		if (!this.summaryEl) return;
-		this.summaryEl.setText(`${describeRule(this.rule)} · ${nextLabel(this.rule)}`);
+		const until = untilLabel(this.rule);
+		this.summaryEl.setText([describeRule(this.rule), until, nextLabel(this.rule)].filter(Boolean).join(" · "));
 	}
 
 	private submit(): void {
@@ -279,6 +296,11 @@ export class RuleModal extends Modal {
 			return;
 		}
 		if (r.freq.kind === "every" && !r.from) r.from = todayKey();
+		if (r.until && !/^\d{4}-\d{2}-\d{2}$/.test(r.until)) r.until = "";
+		if (r.until && r.from && r.until < r.from) {
+			new Notice("The end date is before the start date.");
+			return;
+		}
 		this.close();
 		this.onSubmit(r);
 	}
@@ -327,7 +349,8 @@ export class RulesModal extends Modal {
 			const info = row.createDiv({ cls: "daybook-rule-info" });
 			info.createDiv({ cls: "daybook-rule-text", text: rule.text });
 			const bits = [describeRule(rule)];
-			if (rule.card) bits.push(`in ${rule.card.replace(/^\[\[|\]\]$/g, "")}`);
+			if (rule.card) bits.push(`in ${cardLabel(rule.card)}`);
+			if (rule.until) bits.push(untilLabel(rule));
 			bits.push(nextLabel(rule));
 			info.createDiv({ cls: "daybook-rule-meta", text: bits.join(" · ") });
 
@@ -377,6 +400,88 @@ export class RulesModal extends Modal {
 }
 
 /**
+ * "Stop recurring…" from a task's menu: end the rule after a date (it stops
+ * appearing after that day), pause it, or delete it. Tasks already in day
+ * notes stay where they are.
+ */
+export class StopRuleModal extends Modal {
+	private date: string;
+
+	constructor(
+		private plugin: DaybookPlugin,
+		private rule: Rule,
+		/** The day the task was on: the default last day. */
+		from: string,
+	) {
+		super(plugin.app);
+		this.date = rule.until || from;
+	}
+
+	onOpen(): void {
+		this.setTitle(`Stop recurring: ${this.rule.text}`);
+		const { contentEl } = this;
+		contentEl.createEl("p", {
+			cls: "daybook-carry-intro",
+			text: `${describeRule(this.rule)}${this.rule.until ? ` · ${untilLabel(this.rule)}` : ""}. Tasks already in your day notes stay; only later ones stop.`,
+		});
+		new Setting(contentEl)
+			.setName("Last day")
+			.setDesc("It won't appear after this day.")
+			.addText((t) => {
+				t.inputEl.type = "date";
+				t.setValue(this.date).onChange((v) => (this.date = v));
+			})
+			.addButton((b) =>
+				b
+					.setButtonText("Stop after this day")
+					.setCta()
+					.onClick(() => {
+						if (!/^\d{4}-\d{2}-\d{2}$/.test(this.date)) {
+							new Notice("Pick a date.");
+							return;
+						}
+						void this.changeRule((r) => (r.until = this.date), `${this.rule.text} stops after ${formatDate(this.date, { day: "numeric", month: "short" }, moment.locale())}.`);
+					}),
+			);
+		const more = new Setting(contentEl).setName("Or");
+		if (this.rule.until) more.addButton((b) => b.setButtonText("Keep going (no end)").onClick(() => void this.changeRule((r) => (r.until = ""), `${this.rule.text} keeps going.`)));
+		more.addButton((b) =>
+			b.setButtonText(this.rule.paused ? "Resume" : "Pause").onClick(() =>
+				void this.changeRule((r) => (r.paused = !r.paused), this.rule.paused ? `${this.rule.text} resumed.` : `${this.rule.text} paused.`),
+			),
+		);
+		more.addButton((b) =>
+			b
+				.setButtonText("Delete rule")
+				.setWarning()
+				.onClick(() => void this.changeRule(null, `Deleted the recurring task ${this.rule.text}.`)),
+		);
+	}
+
+	/** Changes the rule (or deletes it with null), re-reading the rules first. */
+	private async changeRule(change: ((r: Rule) => void) | null, done: string): Promise<void> {
+		this.close();
+		const line = formatRule(this.rule);
+		try {
+			await this.plugin.recurring.change((rules) => {
+				const i = rules.findIndex((r) => formatRule(r) === line);
+				if (i < 0) return;
+				if (change) change(rules[i]!);
+				else rules.splice(i, 1);
+			});
+			new Notice(done);
+		} catch (e) {
+			console.error("Daybook: could not update recurring task", e);
+			new Notice("Daybook could not update the recurring task.");
+		}
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
+/**
  * "Add recurring task" dialog; saves the new rule. `prefill` starts it from an
  * existing task; `after` gets the saved rule.
  */
@@ -393,4 +498,12 @@ export function openAddRule(plugin: DaybookPlugin, after?: (rule: Rule) => void,
 				new Notice("Daybook could not add the recurring task.");
 			});
 	}, true).open();
+}
+
+/** "dpu › abc" for a milestone card, "Website" for a project card, else the name. */
+function cardLabel(card: string): string {
+	const link = parseCardLink(card);
+	if (!link) return card;
+	if (link.milestoneId) return `${link.project} › ${link.alias ?? link.milestoneId}`;
+	return link.title ? `${link.project} › ${link.title}` : link.project;
 }

@@ -421,7 +421,7 @@ test("tag from category name", async () => {
 
 test("recurring rules: reading and writing lines", async () => {
 	const R = await import("../src/core/recurring");
-	assert.deepEqual(R.parseRule("- Pay rent | monthly on 1"), { text: "Pay rent", freq: { kind: "monthly", day: 1 }, card: null, from: "", paused: false });
+	assert.deepEqual(R.parseRule("- Pay rent | monthly on 1"), { text: "Pay rent", freq: { kind: "monthly", day: 1 }, card: null, from: "", until: "", paused: false });
 	assert.deepEqual(R.parseRule("- Team sync | weekly on Thu, mon | card: Work")!.freq, { kind: "weekly", days: [1, 4] });
 	assert.equal(R.parseRule("- Team sync | weekly on Thu, mon | card: Work")!.card, "Work");
 	assert.deepEqual(R.parseRule("- Backup | every 3 days | from: 2026-11-09 | paused"), {
@@ -429,6 +429,7 @@ test("recurring rules: reading and writing lines", async () => {
 		freq: { kind: "every", n: 3, unit: "days" },
 		card: null,
 		from: "2026-11-09",
+		until: "",
 		paused: true,
 	});
 	assert.equal(R.parseRule("- Just a note"), null);
@@ -610,4 +611,30 @@ test("year in numbers", async () => {
 	// A run across a month end counts as one
 	assert.equal(Y.yearStats(["2026-01-31", "2026-02-01"], 2026).longest, 2);
 	assert.deepEqual(Y.yearStats([], 2026), { days: 0, byMonth: Array(12).fill(0), longest: 0, longestFrom: null });
+});
+
+test("recurring tasks: end dates and project/milestone cards", async () => {
+	const R = await import("../src/core/recurring");
+	const D = await import("../src/core/day");
+	// Ends on a date
+	const course = R.parseRule("- Course | weekly on tue | from: 2026-11-09 | until: 2026-11-24")!;
+	assert.equal(course.until, "2026-11-24");
+	assert.equal(R.isDue(course, "2026-11-24"), true);
+	assert.equal(R.isDue(course, "2026-12-01"), false);
+	assert.equal(R.formatRule(course), "- Course | weekly on tue | from: 2026-11-09 | until: 2026-11-24");
+	assert.equal(R.nextDue(course, "2026-11-25"), null);
+
+	// A milestone card is stored by its link, without the "|alias" that broke the line
+	const r = { text: "xxx", freq: { kind: "daily" as const }, card: "[[dpu#^abc|abc]]", from: "", until: "", paused: false };
+	assert.equal(R.formatRule(r), "- xxx | daily | card: [[dpu#^abc]]");
+	assert.equal(R.parseRule(R.formatRule(r))!.card, "[[dpu#^abc]]");
+	// Lines saved by the older version are repaired
+	assert.equal(R.parseRule("- xxx | daily | card: [[dpu#^abc/abc]] | from: 2026-11-09")!.card, "[[dpu#^abc]]");
+	// ...and the task lands in the day's existing milestone card, whatever its display text
+	const day = D.parseDay("## Tasks\n\n### [[dpu#^abc|abc]]\n\n- [ ] existing\n");
+	R.addRuleTasks(day, [R.parseRule("- xxx | daily | card: [[dpu#^abc]]")!]);
+	assert.deepEqual(day.groups.map((g) => [g.name, g.tasks.map((t) => t.text)]), [[null, []], ["[[dpu#^abc|abc]]", ["existing", "xxx"]]]);
+	// A named project card keeps its title; plain cards are unchanged
+	assert.equal(R.ruleCard("[[Website]] Design"), "[[Website]] Design");
+	assert.equal(R.ruleCard("Home"), "Home");
 });
