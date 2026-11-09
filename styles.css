@@ -2507,3 +2507,34 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 }
+
+/* ---------- Move to date ---------- */
+
+.daybook-move-task {
+	margin-bottom: var(--size-4-3);
+	padding: var(--size-2-3) var(--size-4-3);
+	border-radius: var(--radius-m);
+	background-color: var(--background-secondary);
+	font-weight: var(--font-semibold);
+}
+
+.daybook-move-quick {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-2);
+}
+
+.daybook-move-quick button.daybook-move-pick {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	height: auto;
+	padding: var(--size-2-3) var(--size-4-2);
+}
+
+.daybook-move-pick-date {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}

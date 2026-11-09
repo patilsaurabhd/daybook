@@ -581,3 +581,19 @@ test("repeating events", async () => {
 	const once = E.eventFromProps("Trip", { start: "2026-11-20", end: "2026-11-22" })!;
 	assert.deepEqual(E.expandEvents([fortnight, once], "2026-11-01", "2026-11-30").map((o) => `${o.name} ${o.start}`), ["F 2026-11-09", "Trip 2026-11-20", "F 2026-11-23"]);
 });
+
+test("move one task (with its open subtasks) to another day", async () => {
+	const D = await import("../src/core/day");
+	const from = D.parseDay("## Tasks\n\n- [ ] keep\n\n### Work\n\n- [ ] report\n\t- [x] outline\n\t- [ ] draft\n- [ ] email\n");
+	const cards = D.takeTaskBlock(from, 1, 0);
+	assert.deepEqual(cards.map((c) => [c.name, c.tasks.map((t) => [t.text, t.depth])]), [["Work", [["report", 0], ["draft", 1]]]]);
+	// The source keeps them, marked [>]; done subtasks and other tasks stay as they were
+	assert.match(D.applyDay("", from), /- \[>\] report\n\t- \[x\] outline\n\t- \[>\] draft\n- \[ \] email/);
+	// Into the same card on the other day (created if needed)
+	const to = D.emptyDay();
+	D.addCarried(to, cards);
+	assert.deepEqual(to.groups.map((g) => [g.name, g.tasks.map((t) => t.text)]), [[null, []], ["Work", ["report", "draft"]]]);
+	// Done or already-moved tasks can't be moved
+	assert.deepEqual(D.takeTaskBlock(from, 1, 0), []);
+	assert.deepEqual(D.takeTaskBlock(from, 1, 1), []);
+});

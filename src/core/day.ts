@@ -361,6 +361,19 @@ export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>): Carr
 }
 
 /**
+ * "Move to date": takes one task and its unfinished subtasks out of a day
+ * (marked [>], like carry-over), ready to add to another day's same card.
+ */
+export function takeTaskBlock(entry: DayEntry, group: number, index: number): CarriedCard[] {
+	const tasks = entry.groups[group]?.tasks;
+	const task = tasks?.[index];
+	if (!tasks || !task || !isOpen(task)) return [];
+	const only = new Map<string, string>();
+	for (let i = index; i < blockEnd(tasks, index); i++) only.set(taskKey(group, i), tasks[i]!.text);
+	return takeOpenTasks(entry, only);
+}
+
+/**
  * Adds carried tasks to the matching cards (by heading), creating cards as
  * needed. A task that's already open in the day (same text, e.g. today's
  * recurring "Stretch") isn't added a second time.

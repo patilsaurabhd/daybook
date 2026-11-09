@@ -11,10 +11,28 @@
 //   the left and its linked cards ("### [[Project]]") on the right; other
 //   cards sit in a "General" row. Chips choose what to show.
 
-import { Component, Menu, setIcon } from "obsidian";
+import { Component, Keymap, Menu, Notice, moment, setIcon } from "obsidian";
+import { MoveModal } from "./moveModal";
+import { dayPath } from "../core/paths";
 import type DaybookPlugin from "../main";
-import { DateKey, todayKey } from "../core/dates";
-import { Task, TaskGroup, TaskPos, blockEnd, emptyGroup, isOpen, moveTask, newTask, removeGroup, shiftDepth } from "../core/day";
+import { DateKey, formatDate, todayKey } from "../core/dates";
+import {
+	Task,
+	TaskGroup,
+	TaskPos,
+	addCarried,
+	applyDay,
+	blockEnd,
+	emptyDay,
+	emptyGroup,
+	isOpen,
+	moveTask,
+	newTask,
+	parseDay,
+	removeGroup,
+	shiftDepth,
+	takeTaskBlock,
+} from "../core/day";
 import {
 	CardLink,
 	Project,
@@ -754,14 +772,22 @@ export class TaskBoard extends Component {
 		setIcon(more, "more-horizontal");
 		const open = (evt: MouseEvent) => {
 			evt.preventDefault();
-			this.showTaskMenu(evt, task, this.groups[gi]!);
+			this.showTaskMenu(evt, task, gi, ti);
 		};
 		more.addEventListener("click", open);
 		handle.addEventListener("contextmenu", open);
 	}
 
-	private showTaskMenu(evt: MouseEvent, task: Task, group: TaskGroup): void {
+	private showTaskMenu(evt: MouseEvent, task: Task, gi: number, ti: number): void {
+		const group = this.groups[gi]!;
 		const menu = new Menu();
+		menu.addItem((i) =>
+			i
+				.setTitle("Move to date…")
+				.setIcon("calendar-days")
+				.setDisabled(!isOpen(task))
+				.onClick(() => this.moveToDate(gi, ti)),
+		);
 		menu.addItem((i) =>
 			i
 				.setTitle("Make recurring…")
@@ -785,6 +811,41 @@ export class TaskBoard extends Component {
 	}
 
 	// ---- Cards ----
+
+	// ---- Move to date ----
+
+	private moveToDate(gi: number, ti: number): void {
+		const task = this.groups[gi]?.tasks[ti];
+		if (!task || !isOpen(task)) return;
+		const from = this.projectCtx?.date ?? todayKey();
+		new MoveModal(this.plugin.app, task.text, from, this.plugin.settings.firstDayOfWeek, (date) => void this.moveBlockTo(gi, ti, task, date)).open();
+	}
+
+	/**
+	 * Adds the task (and its unfinished subtasks) to the chosen day's note under
+	 * the same card, then marks it [>] here. The other day is written first, so
+	 * nothing is marked as moved if that fails.
+	 */
+	private async moveBlockTo(gi: number, ti: number, task: Task, date: DateKey): Promise<void> {
+		if (this.groups[gi]?.tasks[ti] !== task) return; // the list changed meanwhile
+		const preview = takeTaskBlock({ ...emptyDay(), groups: structuredClone(this.groups) }, gi, ti);
+		if (preview.length === 0) return;
+		try {
+			await this.plugin.store.write(dayPath(this.plugin.settings.rootFolder, date), (old) => {
+				const target = parseDay(old);
+				addCarried(target, preview);
+				return applyDay(old, target);
+			});
+		} catch (e) {
+			console.error("Daybook: could not move task", e);
+			new Notice("Daybook could not move the task.");
+			return;
+		}
+		takeTaskBlock({ ...emptyDay(), groups: this.groups }, gi, ti);
+		this.onChange();
+		this.render();
+		new Notice(`Moved to ${formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale())}.`);
+	}
 
 	/** New card; in a project when `project` is given. */
 	private addCard(project?: string): void {
@@ -811,6 +872,12 @@ export class TaskBoard extends Component {
 		if (evt.isComposing) return;
 		const tasks = this.groups[gi]!.tasks;
 
+		// Mod+Shift+M: move this task to another day.
+		if (Keymap.isModifier(evt, "Mod") && evt.shiftKey && evt.key.toLowerCase() === "m") {
+			evt.preventDefault();
+			this.moveToDate(gi, ti);
+			return;
+		}
 		if (evt.altKey && (evt.key === "ArrowUp" || evt.key === "ArrowDown")) {
 			evt.preventDefault();
 			this.moveByKey(gi, ti, evt.key === "ArrowUp" ? -1 : 1);
