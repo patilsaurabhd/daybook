@@ -442,6 +442,11 @@ export class DayCard extends Component {
 			attr: { role: "button", tabindex: "0", "aria-label": this.entry.tags.length ? "Add a tag" : "Tag this day" },
 		});
 		setIcon(plus, "plus");
+		// Until the day has a tag, spell it out so the + is noticed.
+		if (this.entry.tags.length === 0) {
+			plus.addClass("has-label");
+			plus.createSpan({ text: "Tags" });
+		}
 		const open = (evt: MouseEvent | KeyboardEvent) => {
 			const menu = new Menu();
 			for (const cat of categories) {

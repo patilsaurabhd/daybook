@@ -2498,3 +2498,12 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 .is-daybook-focus .daybook-tags-inline {
 	display: none;
 }
+
+/* "+ Tags" on a day without tags */
+.daybook-tag-add.clickable-icon.has-label {
+	gap: var(--size-2-1);
+	padding: 1px var(--size-4-2) 1px var(--size-2-3);
+	border-radius: var(--radius-l);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
