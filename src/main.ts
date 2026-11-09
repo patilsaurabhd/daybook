@@ -68,14 +68,12 @@ export default class DaybookPlugin extends Plugin {
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_DAYBOOK, (leaf) => new DaybookView(leaf, this));
 
-		this.addRibbonIcon("calendar-days", "Open today", () => {
-			void this.open({ level: "day", date: todayKey() });
-		});
+		this.addRibbonIcon("calendar-days", "Open today", () => void this.openToday());
 
 		this.addCommand({
 			id: "open-today",
 			name: "Open today",
-			callback: () => void this.open({ level: "day", date: todayKey() }),
+			callback: () => void this.openToday(),
 		});
 		this.addCommand({
 			id: "focus-today",
@@ -170,6 +168,16 @@ export default class DaybookPlugin extends Plugin {
 		await workspace.revealLeaf(leaf);
 		// On phones the sidebar covers the screen; get it out of the way.
 		if (Platform.isMobile) workspace.rightSplit.collapse();
+	}
+
+	/**
+	 * Today's page, with the calendar showing in the right sidebar (opened if
+	 * it was collapsed or on another tab). Phones skip the calendar, since the
+	 * sidebar would cover the page.
+	 */
+	async openToday(): Promise<void> {
+		if (!Platform.isMobile) await this.revealCalendar();
+		await this.open({ level: "day", date: todayKey() }); // focus ends on today's page
 	}
 
 	async revealCalendar(): Promise<void> {
