@@ -103,13 +103,17 @@ export class CompactDayCard {
 		item.setCssProps({ "--daybook-depth": String(row.depth) });
 		if (row.carried) {
 			item.addClass("is-carried");
-			setIcon(item.createSpan({ cls: "daybook-carried-mark", attr: { "aria-label": "Moved to a later day" } }), "corner-up-right");
+			const where = row.movedTo ? formatDate(row.movedTo, { day: "numeric", month: "short" }, moment.locale()) : "";
+			setIcon(item.createSpan({ cls: "daybook-carried-mark", attr: { "aria-label": where ? `Moved to ${where}` : "Moved to a later day" } }), "corner-up-right");
 		} else {
 			const box = item.createEl("input", { type: "checkbox", cls: "task-list-item-checkbox", attr: { "aria-label": row.text } });
 			box.checked = row.done;
 			box.addEventListener("change", () => void this.setDone(row, box.checked));
 		}
 		item.createSpan({ cls: "daybook-mini-text", text: row.text });
+		if (row.carried && row.movedTo) {
+			item.createSpan({ cls: "daybook-moved-to", text: `→ ${formatDate(row.movedTo, { day: "numeric", month: "short" }, moment.locale())}` });
+		}
 	}
 
 	/** Ticks a task in the day note, checking it's still the same task first. */

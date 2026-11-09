@@ -597,3 +597,23 @@ test("move one task (with its open subtasks) to another day", async () => {
 	assert.deepEqual(D.takeTaskBlock(from, 1, 0), []);
 	assert.deepEqual(D.takeTaskBlock(from, 1, 1), []);
 });
+
+test("moved tasks remember where they went", async () => {
+	const D = await import("../src/core/day");
+	const day = D.parseDay("## Tasks\n\n- [ ] report ^r1\n\t- [ ] draft\n- [ ] email\n");
+	D.takeTaskBlock(day, 0, 0, "2026-11-13");
+	const text = D.applyDay("", day);
+	assert.match(text, /- \[>\] report \(moved to \[\[2026-11-13\]\]\) \^r1\n\t- \[>\] draft \(moved to \[\[2026-11-13\]\]\)\n- \[ \] email/);
+	const back = D.parseDay(text);
+	assert.equal(back.groups[0]!.tasks[0]!.text, "report");
+	assert.equal(back.groups[0]!.tasks[0]!.movedTo, "2026-11-13");
+	assert.equal(back.groups[0]!.tasks[0]!.id, "r1");
+	assert.equal(D.applyDay(text, back), text); // stable
+	// Carry-over records it too
+	const y = D.parseDay("## Tasks\n\n- [ ] a\n");
+	D.takeOpenTasks(y, undefined, "2026-11-10");
+	assert.match(D.applyDay("", y), /- \[>\] a \(moved to \[\[2026-11-10\]\]\)/);
+	// Un-moving drops the note
+	back.groups[0]!.tasks[0]!.carried = false;
+	assert.match(D.applyDay("", back), /- \[ \] report \^r1\n/);
+});

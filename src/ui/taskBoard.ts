@@ -731,11 +731,16 @@ export class TaskBoard extends Component {
 			row.addClass("is-carried");
 			const mark = row.createDiv({
 				cls: "daybook-carried-mark clickable-icon",
-				attr: { role: "button", tabindex: "0", "aria-label": "Moved to a later day. Click to keep it here instead." },
+				attr: {
+					role: "button",
+					tabindex: "0",
+					"aria-label": `${task.movedTo ? `Moved to ${movedLabel(task.movedTo)}` : "Moved to a later day"}. Click to keep it here instead.`,
+				},
 			});
 			setIcon(mark, "corner-up-right");
 			mark.addEventListener("click", () => {
 				task.carried = false;
+				delete task.movedTo;
 				this.onChange();
 				this.render();
 			});
@@ -758,6 +763,16 @@ export class TaskBoard extends Component {
 		input.addEventListener("keydown", (evt) => this.onTaskKey(evt, gi, ti, input));
 		this.inputs.set(`${gi}:${ti}`, input);
 		if (!collapsed) this.order.push(input);
+
+		// Where a moved task went: "→ Fri 13 Nov", click to go there.
+		if (task.carried && task.movedTo) {
+			const to = task.movedTo;
+			const link = row.createSpan({ cls: "daybook-moved-to", text: `→ ${movedLabel(to)}`, attr: { role: "link", tabindex: "0", "aria-label": `Open ${movedLabel(to)}` } });
+			link.addEventListener("click", () => void this.plugin.open({ level: "day", date: to }));
+			link.addEventListener("keydown", (e) => {
+				if (e.key === "Enter") void this.plugin.open({ level: "day", date: to });
+			});
+		}
 
 		if (task.children.length) {
 			row.createSpan({
@@ -841,7 +856,7 @@ export class TaskBoard extends Component {
 			new Notice("Daybook could not move the task.");
 			return;
 		}
-		takeTaskBlock({ ...emptyDay(), groups: this.groups }, gi, ti);
+		takeTaskBlock({ ...emptyDay(), groups: this.groups }, gi, ti, date);
 		this.onChange();
 		this.render();
 		new Notice(`Moved to ${formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale())}.`);
@@ -1086,4 +1101,9 @@ const LOOSE_KEY = "\u0001tasks";
 
 function focusKey(group: TaskGroup): string {
 	return group.name === null ? LOOSE_KEY : group.name.trim().toLowerCase();
+}
+
+/** "Fri 13 Nov" for a moved task's new day. */
+function movedLabel(date: string): string {
+	return formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale());
 }

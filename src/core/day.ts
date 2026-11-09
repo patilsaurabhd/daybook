@@ -56,6 +56,8 @@ export interface Task {
 	id?: string;
 	/** Moved to a later day ("- [>] task"); not counted as open or done. */
 	carried?: boolean;
+	/** Where a moved task went: written as "(moved to [[2026-11-13]])". */
+	movedTo?: string;
 }
 
 /** A task card: a "### Name" block inside Tasks. The first group (name null) holds ungrouped tasks. */
@@ -93,6 +95,9 @@ export function newTask(text: string, depth = 0): Task {
 	return { done: false, text, depth, children: [] };
 }
 
+/** "(moved to [[2026-11-13]])" at the end of a moved task. */
+const MOVED_RE = /\s*\(moved to \[\[(\d{4}-\d{2}-\d{2})(?:\|[^\]]*)?\]\]\)$/;
+
 const TASK_RE = /^([ \t]*)[-*+] \[([ xX>])\](?: (.*))?$/;
 
 /** The indentation unit a note uses for nested tasks (tab, or the smallest space indent). */
@@ -127,9 +132,13 @@ export function parseTasks(section: string): { tasks: Task[]; preamble: string[]
 			const depth = Math.min(depthOf(m[1]!, indent), prev ? prev.depth + 1 : 0);
 			const raw = (m[3] ?? "").trim();
 			const idMatch = /(?:^|\s)\^([A-Za-z0-9-]+)$/.exec(raw);
+			let text = idMatch ? raw.slice(0, idMatch.index).trim() : raw;
+			const movedMatch = MOVED_RE.exec(text);
+			if (movedMatch) text = text.slice(0, movedMatch.index).trim();
 			const mark = m[2]!;
-			const task: Task = { done: mark === "x" || mark === "X", text: idMatch ? raw.slice(0, idMatch.index).trim() : raw, depth, children: [] };
+			const task: Task = { done: mark === "x" || mark === "X", text, depth, children: [] };
 			if (mark === ">") task.carried = true;
+			if (movedMatch) task.movedTo = movedMatch[1]!;
 			if (idMatch) task.id = idMatch[1]!;
 			tasks.push(task);
 		} else if (tasks.length > 0) {
@@ -151,8 +160,9 @@ export function serializeTasks(tasks: Task[], preamble: string[] = [], indent = 
 		const text = t.text.replace(/\s*\n\s*/g, " ").trim();
 		if (text === "" && t.children.length === 0) continue; // drop empty rows
 		const id = t.id ? ` ^${t.id}` : "";
+		const moved = t.carried && t.movedTo ? ` (moved to [[${t.movedTo}]])` : "";
 		const mark = t.carried ? ">" : t.done ? "x" : " ";
-		lines.push(`${indent.repeat(t.depth)}- [${mark}] ${text}${id}`.trimEnd());
+		lines.push(`${indent.repeat(t.depth)}- [${mark}] ${text}${moved}${id}`.trimEnd());
 		lines.push(...t.children);
 	}
 	return lines.join("\n");
@@ -338,7 +348,7 @@ export function listOpenTasks(entry: DayEntry): OpenCard[] {
  * "carried" ([>]) in `entry`. With `only`, just those tasks (by taskKey, and
  * only if their text still matches) are taken; the rest stay open.
  */
-export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>): CarriedCard[] {
+export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>, movedTo?: string): CarriedCard[] {
 	const out: CarriedCard[] = [];
 	for (const [gi, group] of entry.groups.entries()) {
 		const moved: Task[] = [];
@@ -347,6 +357,7 @@ export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>): Carr
 			if (only && only.get(taskKey(gi, ti)) !== t.text) continue;
 			moved.push({ done: false, text: t.text, depth: t.depth, children: [...t.children] });
 			t.carried = true;
+			if (movedTo) t.movedTo = movedTo;
 		}
 		if (moved.length === 0) continue;
 		// Re-level: a subtask whose parent stayed behind moves up.
@@ -364,13 +375,13 @@ export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>): Carr
  * "Move to date": takes one task and its unfinished subtasks out of a day
  * (marked [>], like carry-over), ready to add to another day's same card.
  */
-export function takeTaskBlock(entry: DayEntry, group: number, index: number): CarriedCard[] {
+export function takeTaskBlock(entry: DayEntry, group: number, index: number, movedTo?: string): CarriedCard[] {
 	const tasks = entry.groups[group]?.tasks;
 	const task = tasks?.[index];
 	if (!tasks || !task || !isOpen(task)) return [];
 	const only = new Map<string, string>();
 	for (let i = index; i < blockEnd(tasks, index); i++) only.set(taskKey(group, i), tasks[i]!.text);
-	return takeOpenTasks(entry, only);
+	return takeOpenTasks(entry, only, movedTo);
 }
 
 /**

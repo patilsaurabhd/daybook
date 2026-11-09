@@ -146,7 +146,7 @@ export class DayCard extends Component {
 		try {
 			await this.plugin.store.write(src.path, (old) => {
 				const e = parseDay(old);
-				cards = takeOpenTasks(e, only);
+				cards = takeOpenTasks(e, only, this.date); // the old day notes where they went
 				return cards.length ? applyDay(old, e) : old;
 			});
 			const n = addCarried(this.entry, cards);

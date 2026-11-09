@@ -2538,3 +2538,30 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 }
+
+/* Layout switch wins over the desktop fill rules above:
+   "Diary" really hides the tasks, "Tasks" really hides the diary. */
+body:not(.is-phone) .is-tasks-hidden .daybook-pane-tasks,
+body:not(.is-phone) .is-diary-hidden .daybook-pane-diary {
+	display: none;
+}
+
+/* "→ Fri 13 Nov" next to a moved task */
+.daybook-moved-to {
+	flex: none;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.daybook-task .daybook-moved-to:hover,
+.daybook-task .daybook-moved-to:focus-visible {
+	color: var(--text-accent);
+	text-decoration: underline;
+	outline: none;
+}
+
+.daybook-mini-task .daybook-moved-to {
+	cursor: inherit;
+}

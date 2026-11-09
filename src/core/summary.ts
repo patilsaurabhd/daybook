@@ -10,6 +10,8 @@ export interface SummaryRow {
 	done: boolean;
 	/** Moved to a later day ([>]). */
 	carried: boolean;
+	/** The day it was moved to, if known. */
+	movedTo?: string;
 	depth: number;
 	/** Where the task lives, so a compact card can tick it. */
 	pos: TaskPos;
@@ -37,7 +39,7 @@ export function summarizeDay(entry: DayEntry | null, maxRows: number, categories
 				if (t.text.trim() === "") return;
 				if (t.done) done++;
 				else if (!t.carried) open++;
-				rows.push({ text: t.text, done: t.done, carried: t.carried === true, depth: t.depth, pos: { group, index } });
+				rows.push({ text: t.text, done: t.done, carried: t.carried === true, movedTo: t.movedTo, depth: t.depth, pos: { group, index } });
 			}),
 		);
 	}
