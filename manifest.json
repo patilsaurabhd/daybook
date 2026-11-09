@@ -1,0 +1,9 @@
+{
+	"id": "daybook",
+	"name": "Daybook",
+	"version": "0.1.0",
+	"minAppVersion": "1.7.2",
+	"description": "A planner and diary: a sidebar calendar opens editable day, week, month and year cards stored as plain Markdown.",
+	"author": "Saurabh Patil",
+	"isDesktopOnly": false
+}

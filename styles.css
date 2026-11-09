@@ -1,0 +1,2287 @@
+/* Daybook — uses Obsidian theme variables only, so it follows light/dark themes. */
+
+/* ---------- Sidebar calendar ---------- */
+
+.daybook-calendar {
+	padding: var(--size-4-2);
+}
+
+.daybook-cal-nav {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.daybook-cal-title {
+	flex: 1;
+	display: flex;
+	gap: var(--size-4-1);
+	justify-content: center;
+	font-weight: var(--font-semibold);
+}
+
+.daybook-cal-link,
+.daybook-link {
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	padding: 0 var(--size-2-1);
+}
+
+.daybook-cal-link:hover,
+.daybook-link:hover {
+	color: var(--text-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-cal-link.is-selected {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+.daybook-cal-today {
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	padding: var(--size-2-1) var(--size-2-3);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.daybook-cal-today:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-cal-grid {
+	display: grid;
+	grid-template-columns: auto repeat(7, 1fr);
+	gap: 2px;
+	text-align: center;
+	font-size: var(--font-ui-small);
+}
+
+.daybook-cal-head {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	padding-bottom: var(--size-2-1);
+}
+
+.daybook-cal-week {
+	cursor: pointer;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-2-2) var(--size-2-2);
+	border-radius: var(--radius-s);
+	align-self: center;
+}
+
+.daybook-cal-week:hover {
+	color: var(--text-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-cal-week.is-selected {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+.daybook-cal-day {
+	position: relative;
+	cursor: pointer;
+	padding: var(--size-2-2) 0 var(--size-4-1);
+	border-radius: var(--radius-s);
+	/* Comfortable tap target on phones */
+	min-height: 2em;
+}
+
+.daybook-cal-day:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-cal-day.is-other-month {
+	color: var(--text-faint);
+}
+
+.daybook-cal-day.in-selected-week {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-cal-day.is-today .daybook-cal-num {
+	color: var(--text-accent);
+	font-weight: var(--font-bold);
+}
+
+.daybook-cal-day.is-selected {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.daybook-cal-day.is-selected .daybook-cal-num {
+	color: var(--text-on-accent);
+}
+
+.daybook-cal-dot {
+	position: absolute;
+	left: 50%;
+	bottom: 3px;
+	width: 4px;
+	height: 4px;
+	margin-left: -2px;
+	border-radius: 50%;
+	background-color: var(--text-muted);
+}
+
+.daybook-cal-day.is-selected .daybook-cal-dot {
+	background-color: var(--text-on-accent);
+}
+
+.daybook-cal-day:focus-visible,
+.daybook-cal-week:focus-visible,
+.daybook-cal-link:focus-visible,
+.daybook-cal-today:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+	outline: none;
+}
+
+/* ---------- Main view ---------- */
+
+.daybook-view {
+	container-type: inline-size;
+	padding: var(--size-4-4) var(--size-4-6);
+}
+
+.daybook-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-4-4);
+	flex-wrap: wrap;
+}
+
+.daybook-title {
+	font-size: var(--h2-size);
+	font-weight: var(--h2-weight);
+	line-height: var(--line-height-tight);
+}
+
+.daybook-subtitle {
+	display: flex;
+	gap: var(--size-4-2);
+	align-items: center;
+	margin-top: var(--size-2-1);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.daybook-today-badge {
+	color: var(--text-accent);
+	font-weight: var(--font-semibold);
+}
+
+.daybook-nav {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.daybook-placeholder {
+	color: var(--text-muted);
+	padding: var(--size-4-8) 0;
+	text-align: center;
+}
+
+/* ---------- Day card ---------- */
+
+.daybook-top {
+	display: flex;
+	align-items: stretch;
+	margin-bottom: var(--size-4-6);
+	padding-bottom: var(--size-4-4);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.daybook-goals {
+	flex: 3 1 0;
+	min-width: 0;
+	padding-right: var(--size-4-4);
+}
+
+.daybook-day-tags {
+	flex: 1 1 0;
+	min-width: 150px;
+	padding-left: var(--size-4-4);
+	border-left: 1px solid var(--background-modifier-border);
+}
+
+.daybook-tag-list {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	flex-wrap: wrap;
+}
+
+.daybook-chip {
+	--daybook-cat-color: var(--text-muted);
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-l);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	background-color: transparent;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.daybook-chip:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-chip-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 1.5px solid var(--daybook-cat-color);
+}
+
+.daybook-chip.is-active {
+	color: var(--text-normal);
+	border-color: var(--daybook-cat-color);
+	background-color: color-mix(in srgb, var(--daybook-cat-color) 18%, transparent);
+}
+
+.daybook-chip.is-active .daybook-chip-dot {
+	background-color: var(--daybook-cat-color);
+}
+
+.daybook-view input.daybook-tags {
+	flex: 1 1 100%;
+	min-width: 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+
+/* ---------- Markdown box (goals, diary) ---------- */
+
+.daybook-mdbox textarea.daybook-mdbox-input {
+	width: 100%;
+	resize: none;
+	overflow: hidden;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+	font-family: var(--font-text);
+	font-size: var(--font-text-size);
+	line-height: var(--line-height-normal);
+	tab-size: 4;
+}
+
+.daybook-mdbox textarea.daybook-mdbox-input:focus {
+	box-shadow: none;
+}
+
+.daybook-mdbox-preview {
+	cursor: text;
+	min-height: 1.5em;
+	border-radius: var(--radius-s);
+}
+
+.daybook-mdbox-preview:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-mdbox-preview > :first-child {
+	margin-top: 0;
+}
+
+.daybook-mdbox-preview > :last-child {
+	margin-bottom: 0;
+}
+
+.daybook-mdbox-preview img {
+	max-width: 100%;
+	border-radius: var(--radius-s);
+}
+
+.daybook-mdbox-tools {
+	margin-top: var(--size-4-2);
+}
+
+.daybook-mdbox-add.clickable-icon {
+	gap: var(--size-4-1);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-mdbox-add.clickable-icon:hover {
+	color: var(--text-normal);
+}
+
+.daybook-hidden {
+	display: none;
+}
+
+.daybook-panes {
+	display: flex;
+	align-items: stretch;
+}
+
+.daybook-pane {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.daybook-pane-tasks {
+	padding-right: var(--size-4-4);
+}
+
+.daybook-pane-diary {
+	padding-left: var(--size-4-4);
+	/* The faint divider between tasks and diary */
+	border-left: 1px solid var(--background-modifier-border);
+}
+
+.daybook-pane-title {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-faint);
+	margin-bottom: var(--size-4-2);
+}
+
+/* Tasks header: title + "add card" */
+.daybook-pane-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--size-4-2);
+}
+
+.daybook-pane-head .daybook-pane-title {
+	margin-bottom: 0;
+}
+
+.daybook-add-card.clickable-icon {
+	gap: var(--size-4-1);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-add-card.clickable-icon:hover {
+	color: var(--text-normal);
+}
+
+.daybook-board {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-4);
+}
+
+/* Grid of task cards: more columns when there is more room (e.g. diary hidden). */
+.daybook-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	gap: var(--size-4-3);
+	align-items: start;
+}
+
+.daybook-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
+	background-color: var(--background-primary);
+	min-width: 0;
+}
+
+.daybook-card.is-loose {
+	padding-top: var(--size-4-2);
+}
+
+.daybook-card.is-drop-target {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.daybook-card-header {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-2-2);
+}
+
+.daybook-card.is-collapsed .daybook-card-header {
+	margin-bottom: 0;
+}
+
+.daybook-card-toggle.clickable-icon,
+.daybook-card-menu.clickable-icon {
+	padding: var(--size-2-1);
+	flex: none;
+}
+
+.daybook-card-menu.clickable-icon {
+	opacity: 0;
+}
+
+.daybook-card:hover .daybook-card-menu,
+.daybook-card-menu:focus-visible {
+	opacity: 1;
+}
+
+.daybook-view input.daybook-card-title {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+	height: auto;
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-medium);
+}
+
+.daybook-view input.daybook-card-title:focus {
+	box-shadow: none;
+}
+
+.daybook-card-count {
+	display: none;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	white-space: nowrap;
+}
+
+.daybook-card.is-collapsed .daybook-card-count {
+	display: inline;
+}
+
+.daybook-card.is-collapsed .daybook-task-list {
+	display: none;
+}
+
+/* Task rows (subtasks indented by depth) */
+.daybook-task {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	padding: var(--size-2-1) 0;
+	padding-left: calc(var(--daybook-depth, 0) * 20px);
+}
+
+.daybook-task .task-list-item-checkbox {
+	flex: none;
+	margin: 0;
+}
+
+.daybook-task-handle,
+.daybook-task-handle-space {
+	flex: none;
+	width: 14px;
+	display: flex;
+	justify-content: center;
+	color: var(--text-faint);
+}
+
+.daybook-task-handle {
+	cursor: grab;
+	opacity: 0;
+	touch-action: none;
+}
+
+.daybook-task-handle svg {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-task:hover .daybook-task-handle,
+.daybook-task:focus-within .daybook-task-handle {
+	opacity: 1;
+}
+
+/* Touch screens have no hover: always show the grip, faintly. */
+@media (hover: none) {
+	.daybook-task-handle {
+		opacity: 0.6;
+	}
+
+	.daybook-card-menu.clickable-icon {
+		opacity: 1;
+	}
+}
+
+.daybook-board.is-dragging,
+.daybook-board.is-dragging * {
+	cursor: grabbing;
+	user-select: none;
+}
+
+.daybook-task.is-dragging {
+	opacity: 0.35;
+}
+
+.daybook-drop-line {
+	position: absolute;
+	height: 2px;
+	border-radius: 1px;
+	background-color: var(--interactive-accent);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.daybook-view input.daybook-task-text {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: var(--size-2-1) 0;
+	height: auto;
+}
+
+.daybook-view input.daybook-task-text:focus {
+	box-shadow: none;
+	border-bottom: 1px solid var(--background-modifier-border-focus);
+}
+
+.daybook-task.is-done .daybook-task-text {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.daybook-task-new .task-list-item-checkbox {
+	opacity: 0.35;
+}
+
+/* Diary hidden: tasks take the whole width. */
+.is-diary-hidden .daybook-pane-diary {
+	display: none;
+}
+
+.is-diary-hidden .daybook-pane-tasks {
+	padding-right: 0;
+}
+
+/* Diary only: diary takes the whole width. */
+.is-tasks-hidden .daybook-pane-tasks {
+	display: none;
+}
+
+.is-tasks-hidden .daybook-pane-diary {
+	padding-left: 0;
+	padding-top: 0;
+	border: none;
+}
+
+/* Tasks | Both | Diary switch */
+.daybook-layout {
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border-radius: var(--radius-m);
+	background-color: var(--background-modifier-hover);
+	margin-right: var(--size-4-2);
+}
+
+.daybook-layout button.daybook-layout-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.daybook-layout button.daybook-layout-btn:hover {
+	color: var(--text-normal);
+}
+
+.daybook-layout button.daybook-layout-btn.is-active {
+	color: var(--text-normal);
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-s);
+}
+
+.daybook-layout-icon {
+	display: inline-flex;
+}
+
+.daybook-layout-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-task-extra {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-pane-diary .daybook-mdbox textarea.daybook-mdbox-input {
+	min-height: 12em;
+}
+
+/* Narrow panes and phones: stack tasks above diary. */
+@container (max-width: 560px) {
+	.daybook-top {
+		flex-direction: column;
+	}
+
+	.daybook-goals {
+		padding-right: 0;
+		padding-bottom: var(--size-4-3);
+	}
+
+	.daybook-day-tags {
+		min-width: 0;
+		padding-left: 0;
+		border-left: none;
+	}
+
+	.daybook-panes {
+		flex-direction: column;
+	}
+
+	.daybook-pane-tasks {
+		padding-right: 0;
+		padding-bottom: var(--size-4-4);
+	}
+
+	.daybook-pane-diary {
+		padding-left: 0;
+		padding-top: var(--size-4-4);
+		border-left: none;
+		border-top: 1px solid var(--background-modifier-border);
+	}
+}
+
+.is-mobile .daybook-view {
+	padding: var(--size-4-3);
+}
+
+/* ---------- Settings ---------- */
+
+.daybook-category-setting .setting-item-info {
+	display: none;
+}
+
+.daybook-category-setting .setting-item-control {
+	justify-content: flex-start;
+	flex-wrap: wrap;
+}
+
+/* ---------- Week view: compact day cards ---------- */
+
+.daybook-week {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	gap: var(--size-4-3);
+	align-items: stretch;
+}
+
+.daybook-mini {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	min-width: 0;
+	min-height: 120px;
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-primary);
+	cursor: pointer;
+}
+
+.daybook-mini:hover {
+	border-color: var(--background-modifier-border-hover);
+	background-color: var(--background-primary-alt);
+}
+
+.daybook-mini.is-today {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.daybook-mini-head {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-2-3);
+	border-radius: var(--radius-s);
+}
+
+.daybook-mini-head:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+	outline: none;
+}
+
+.daybook-mini-weekday {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+}
+
+.daybook-mini-date {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-semibold);
+	line-height: 1;
+}
+
+.daybook-mini.is-today .daybook-mini-date,
+.daybook-mini.is-today .daybook-mini-weekday {
+	color: var(--text-accent);
+}
+
+.daybook-mini.is-past .daybook-mini-date {
+	color: var(--text-muted);
+}
+
+.daybook-mini-dots {
+	display: inline-flex;
+	gap: 3px;
+	align-self: center;
+}
+
+.daybook-mini-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--daybook-cat-color);
+}
+
+.daybook-mini-count {
+	margin-left: auto;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-mini-tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.daybook-mini-task {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding-left: calc(var(--daybook-depth, 0) * 14px);
+	font-size: var(--font-ui-small);
+	min-width: 0;
+}
+
+.daybook-mini-task .task-list-item-checkbox {
+	flex: none;
+	margin: 0;
+	width: 13px;
+	height: 13px;
+}
+
+.daybook-mini-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-mini-task.is-done .daybook-mini-text {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.daybook-mini-more,
+.daybook-mini-empty {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-mini-more {
+	margin-top: auto;
+}
+
+/* Goals for a week / month / year, above its cards */
+.daybook-period-goals {
+	margin-bottom: var(--size-4-6);
+	padding-bottom: var(--size-4-4);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Open-day icon on compact cards */
+.daybook-mini-page.clickable-icon {
+	padding: 2px;
+	margin-left: var(--size-2-2);
+	opacity: 0;
+	align-self: center;
+}
+
+.daybook-mini-count + .daybook-mini-page.clickable-icon {
+	margin-left: var(--size-2-1);
+}
+
+.daybook-mini-head .daybook-mini-page:first-child,
+.daybook-mini-dots + .daybook-mini-page {
+	margin-left: auto;
+}
+
+.daybook-mini:hover .daybook-mini-page,
+.daybook-mini-page:focus-visible {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.daybook-mini-page.clickable-icon {
+		opacity: 0.7;
+	}
+}
+
+.daybook-mini-page svg {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-mini.is-open {
+	visibility: hidden;
+}
+
+/* A day opened out over its compact card */
+.daybook-week {
+	position: relative;
+}
+
+.daybook-popover .daybook-board {
+	gap: var(--size-4-2);
+}
+
+.daybook-popover {
+	position: absolute;
+	z-index: var(--layer-popover);
+	max-height: 75vh;
+	overflow-y: auto;
+	padding: var(--size-4-3);
+	border: 1px solid var(--background-modifier-border-hover);
+	border-radius: var(--radius-l);
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-l);
+}
+
+.daybook-popover-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.daybook-popover-title {
+	flex: 1;
+	font-weight: var(--font-semibold);
+}
+
+.daybook-popover button.daybook-popover-open {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+}
+
+.daybook-popover .daybook-pane-tasks {
+	padding-right: 0;
+}
+
+/* ---------- Day notes scratchpad ---------- */
+
+.daybook-notes {
+	margin-top: var(--size-4-6);
+	padding-top: var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.daybook-notes-head {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	margin-bottom: var(--size-4-2);
+	color: var(--text-faint);
+}
+
+.daybook-notes-head .daybook-pane-title {
+	margin-bottom: 0;
+}
+
+.daybook-notes-head:hover .daybook-pane-title {
+	color: var(--text-muted);
+}
+
+.daybook-notes-head:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+	outline: none;
+}
+
+.daybook-notes-chevron {
+	display: inline-flex;
+}
+
+.daybook-notes-chevron svg {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-notes-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+.daybook-notes.is-collapsed .daybook-notes-body {
+	display: none;
+}
+
+.daybook-notes.is-collapsed .daybook-notes-head {
+	margin-bottom: 0;
+}
+
+/* ---------- Day page fills the window (not on phones) ----------
+   Goals/tags on top, Tasks/Diary in the middle (each scrolls),
+   Notes in the bottom third (scrolls). Collapsed notes give their space back. */
+
+body:not(.is-phone) .daybook-view.is-fill {
+	display: flex;
+	flex-direction: column;
+}
+
+body:not(.is-phone) .is-fill .daybook-header {
+	flex: none;
+}
+
+body:not(.is-phone) .is-fill .daybook-body,
+body:not(.is-phone) .is-fill .daybook-day {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+body:not(.is-phone) .is-fill .daybook-top {
+	flex: none;
+	max-height: 35%;
+	overflow-y: auto;
+}
+
+body:not(.is-phone) .is-fill .daybook-panes {
+	flex: 1 1 0;
+	min-height: 180px;
+}
+
+body:not(.is-phone) .is-fill .daybook-pane {
+	min-height: 0;
+	overflow-y: auto;
+}
+
+body:not(.is-phone) .is-fill .daybook-notes {
+	flex: 0 0 33%;
+	min-height: 120px;
+	display: flex;
+	flex-direction: column;
+	margin-top: var(--size-4-3);
+}
+
+body:not(.is-phone) .is-fill .daybook-notes-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+body:not(.is-phone) .is-fill .daybook-notes.is-collapsed {
+	flex: none;
+	min-height: 0;
+}
+
+/* Narrow pane: tasks and diary are stacked, so scroll them together. */
+@container (max-width: 560px) {
+	body:not(.is-phone) .is-fill .daybook-panes {
+		overflow-y: auto;
+	}
+
+	body:not(.is-phone) .is-fill .daybook-pane {
+		overflow: visible;
+	}
+}
+
+/* ---------- Focused task card ---------- */
+
+.daybook-cards.is-focus-mode {
+	display: flex;
+	align-items: flex-start;
+}
+
+.daybook-cards.is-focus-mode > .daybook-card.is-focused {
+	flex: 4 1 0;
+	min-width: 0;
+	border-color: var(--interactive-accent);
+}
+
+.daybook-cards-rail {
+	flex: 1 1 0;
+	min-width: 140px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.daybook-card.is-railed {
+	padding: 0;
+}
+
+.daybook-rail-btn {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-radius: var(--radius-m);
+}
+
+.daybook-rail-btn[role="button"] {
+	cursor: pointer;
+}
+
+.daybook-rail-btn[role="button"]:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-rail-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+}
+
+.daybook-card.is-railed .daybook-card-count {
+	display: inline;
+}
+
+.daybook-card-focus.clickable-icon {
+	flex: none;
+	gap: var(--size-2-2);
+	padding: var(--size-2-1);
+	font-size: var(--font-ui-smaller);
+	opacity: 0;
+}
+
+.daybook-card:hover .daybook-card-focus,
+.daybook-card-focus:focus-visible,
+.daybook-card.is-focused .daybook-card-focus {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.daybook-card-focus.clickable-icon {
+		opacity: 1;
+	}
+}
+
+/* Narrow: focused card on top, the others as a wrapping row below. */
+@container (max-width: 560px) {
+	.daybook-cards.is-focus-mode {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.daybook-cards-rail {
+		flex-direction: row;
+		flex-wrap: wrap;
+		min-width: 0;
+	}
+}
+
+/* ---------- Sketch window ---------- */
+
+.daybook-sketch-modal {
+	width: min(900px, 95vw);
+}
+
+.daybook-sketch-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-3);
+	margin-bottom: var(--size-4-2);
+}
+
+.daybook-sketch-group {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: 2px;
+	border-radius: var(--radius-m);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-sketch-group button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.daybook-sketch-group button:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.daybook-sketch-group button.is-active {
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	color: var(--text-normal);
+}
+
+.daybook-swatch::before {
+	content: "";
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background-color: var(--daybook-swatch);
+}
+
+.daybook-size-dot {
+	width: var(--daybook-size);
+	height: var(--daybook-size);
+	border-radius: 50%;
+	background-color: currentColor;
+}
+
+.daybook-sketch-tool svg {
+	width: 16px;
+	height: 16px;
+}
+
+svg.daybook-sketch-canvas {
+	display: block;
+	width: 100%;
+	height: min(60vh, 520px);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-primary);
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.is-phone svg.daybook-sketch-canvas {
+	height: 60vh;
+}
+
+svg.daybook-sketch-canvas.is-erasing {
+	cursor: cell;
+}
+
+svg.daybook-sketch-canvas path {
+	fill: none;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+svg.daybook-sketch-canvas path.daybook-ink {
+	stroke: var(--text-normal);
+}
+
+.daybook-sketch-footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-3);
+}
+
+.daybook-sketch-hint {
+	margin-right: auto;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-mdbox-tools {
+	display: flex;
+	gap: var(--size-4-2);
+}
+
+/* ---------- Projects on the day page ---------- */
+
+.daybook-pane-actions {
+	display: flex;
+	gap: var(--size-2-2);
+}
+
+/* Filter chips: All · General · each project */
+.daybook-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-3);
+}
+
+.daybook-view button.daybook-filter-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-l);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.daybook-view button.daybook-filter-chip:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-view button.daybook-filter-chip.is-active {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.daybook-chip-dot.is-filled {
+	background-color: var(--daybook-cat-color);
+	border-color: var(--daybook-cat-color);
+}
+
+/* A project row: panel on the left, its cards on the right */
+.daybook-lane {
+	display: flex;
+	align-items: stretch;
+	gap: var(--size-4-3);
+}
+
+.daybook-lane > .daybook-cards {
+	flex: 1 1 0;
+	min-width: 0;
+	align-content: start;
+}
+
+.daybook-lane-panel {
+	flex: 0 0 220px;
+	display: flex;
+}
+
+.daybook-lane-general {
+	flex-direction: column;
+	gap: var(--size-2-2);
+}
+
+.daybook-lane-label {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-faint);
+}
+
+.daybook-lane-empty {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	padding: var(--size-4-2) 0;
+}
+
+.daybook-project {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
+	min-width: 0;
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-left: 4px solid var(--daybook-project-colour);
+	border-radius: var(--radius-m);
+	background-color: var(--background-secondary);
+}
+
+.daybook-project.is-done {
+	opacity: 0.75;
+}
+
+.daybook-project-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.daybook-project-toggle.clickable-icon,
+.daybook-project-menu.clickable-icon {
+	flex: none;
+	padding: var(--size-2-1);
+}
+
+.daybook-project-dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--daybook-project-colour);
+}
+
+.daybook-project-name {
+	flex: 1;
+	min-width: 0;
+	font-weight: var(--font-semibold);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.daybook-project-name:hover {
+	color: var(--text-accent);
+	text-decoration: underline;
+}
+
+.daybook-project-progress {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.daybook-progress-bar {
+	height: 6px;
+	border-radius: 3px;
+	background-color: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.daybook-progress-fill {
+	width: var(--daybook-progress);
+	height: 100%;
+	border-radius: 3px;
+	background-color: var(--daybook-project-colour);
+}
+
+.daybook-progress-text,
+.daybook-project-status {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.daybook-milestones {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-top: var(--size-2-2);
+}
+
+.daybook-milestone {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+}
+
+.daybook-milestone .task-list-item-checkbox {
+	flex: none;
+	margin: 0;
+}
+
+.daybook-milestone.is-done .daybook-task-text {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.daybook-view button.daybook-project-today {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	align-self: flex-start;
+	height: auto;
+	margin-top: var(--size-2-2);
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+}
+
+.daybook-card-title-link {
+	flex: 1;
+	min-width: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	font-weight: var(--font-semibold);
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.daybook-card-title-link .daybook-layout-icon {
+	color: var(--text-faint);
+}
+
+.daybook-lane .daybook-card {
+	border-top: 2px solid var(--daybook-project-colour);
+}
+
+.daybook-lane-general .daybook-card {
+	border-top-width: 1px;
+	border-top-color: var(--background-modifier-border);
+}
+
+/* Narrow: project panel above its cards */
+@container (max-width: 560px) {
+	.daybook-lane {
+		flex-direction: column;
+	}
+
+	.daybook-lane-panel {
+		flex: none;
+	}
+}
+
+/* Project rows and card grids respond to the Tasks area's own width. */
+.daybook-pane-tasks {
+	container-type: inline-size;
+}
+
+/* Nested milestones and their task-card buttons */
+.daybook-milestone {
+	padding-left: calc(var(--daybook-depth, 0) * 16px);
+}
+
+.daybook-milestone-card.clickable-icon {
+	flex: none;
+	padding: 2px;
+	opacity: 0;
+}
+
+.daybook-milestone:hover .daybook-milestone-card,
+.daybook-milestone-card:focus-visible,
+.daybook-milestone-card.is-active {
+	opacity: 1;
+}
+
+.daybook-milestone-card.is-active {
+	color: var(--daybook-project-colour);
+}
+
+.daybook-milestone-card svg {
+	width: 14px;
+	height: 14px;
+}
+
+@media (hover: none) {
+	.daybook-milestone-card.clickable-icon {
+		opacity: 0.7;
+	}
+}
+
+/* Project card title: briefcase + editable name */
+.daybook-card-link-icon {
+	color: var(--text-faint);
+}
+
+.daybook-card-link-icon svg,
+.daybook-card-title-link svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* "+ Card" tile at the end of each row */
+.daybook-add-tile {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--size-2-2);
+	min-height: 44px;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+}
+
+.daybook-add-tile:hover,
+.daybook-add-tile:focus-visible {
+	color: var(--text-normal);
+	border-color: var(--background-modifier-border-hover);
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+/* Collapsed project row: one line (no milestones, no cards) */
+.daybook-lane.is-collapsed .daybook-lane-panel {
+	flex: 1 1 auto;
+}
+
+.daybook-lane.is-collapsed .daybook-project {
+	padding-top: var(--size-2-2);
+	padding-bottom: var(--size-2-2);
+}
+
+.daybook-project-summary {
+	flex: none;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.daybook-lane.is-collapsed .daybook-project-name {
+	flex: 0 1 auto;
+}
+
+.daybook-lane.is-collapsed .daybook-project-menu {
+	margin-left: auto;
+}
+
+/* ---------- Month view: calendar grid of compact day cards ---------- */
+
+.daybook-month {
+	position: relative;
+	display: grid;
+	grid-template-columns: 28px repeat(7, minmax(0, 1fr));
+	gap: var(--size-2-2);
+}
+
+.daybook-month-head {
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	padding-bottom: var(--size-2-1);
+}
+
+.daybook-month-week {
+	align-self: start;
+	padding-top: var(--size-4-2);
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.daybook-month-week:hover,
+.daybook-month-week:focus-visible {
+	color: var(--text-accent);
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+.daybook-month .daybook-mini {
+	min-height: 92px;
+	padding: var(--size-2-3) var(--size-4-2);
+	gap: var(--size-2-1);
+}
+
+.daybook-month .daybook-mini-weekday {
+	display: none;
+}
+
+.daybook-month .daybook-mini-date {
+	font-size: var(--font-ui-medium);
+}
+
+.daybook-month .daybook-mini-task {
+	font-size: var(--font-ui-smaller);
+}
+
+.daybook-month .daybook-mini-task .task-list-item-checkbox {
+	width: 11px;
+	height: 11px;
+}
+
+.daybook-month .daybook-mini-empty {
+	display: none;
+}
+
+/* Narrow (phone, or tasks pane in Both): a simple list of days. */
+@container (max-width: 640px) {
+	.daybook-month {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.daybook-month-head,
+	.daybook-month-week,
+	.daybook-month-blank {
+		display: none;
+	}
+
+	.daybook-month .daybook-mini {
+		min-height: 0;
+	}
+
+	.daybook-month .daybook-mini-weekday {
+		display: inline;
+	}
+}
+
+/* ---------- Day page: projects block at the bottom of Tasks ---------- */
+
+.daybook-projects {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	margin-top: var(--size-4-6);
+}
+
+.daybook-projects-head {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--size-4-3);
+}
+
+.daybook-projects-head .daybook-chips {
+	margin-bottom: 0;
+}
+
+/* Desktop day page: Tasks pane fills its height, so the projects block
+   sits at the bottom (just above Notes) and open space stays in between. */
+body:not(.is-phone) .is-fill .daybook-pane-tasks {
+	display: flex;
+	flex-direction: column;
+}
+
+body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board {
+	flex: 1 0 auto;
+}
+
+body:not(.is-phone) .is-fill .daybook-projects {
+	margin-top: auto;
+	padding-top: var(--size-4-6);
+}
+
+/* ---------- Opened-out day: collapsible project lines ---------- */
+
+.daybook-project-line {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
+}
+
+.daybook-project-line-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	padding: var(--size-2-2) var(--size-2-3);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.daybook-project-line-head:hover,
+.daybook-project-line-head:focus-visible {
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+.daybook-project-line-head .daybook-project-name {
+	flex: 0 1 auto;
+}
+
+.daybook-project-line-head svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* The project's cards, indented under its line */
+.daybook-project-line-cards {
+	margin-left: var(--size-4-6);
+	padding-left: var(--size-4-3);
+	border-left: 2px solid var(--daybook-project-colour);
+}
+
+body:not(.is-phone) .is-fill .daybook-projects.is-alone,
+.daybook-projects.is-alone {
+	margin-top: 0;
+	padding-top: 0;
+}
+
+/* ---------- Year view: 12 months × 31 days ---------- */
+
+.daybook-year {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-4);
+}
+
+.daybook-year-legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-2-3);
+}
+
+.daybook-chip-count {
+	font-variant-numeric: tabular-nums;
+	opacity: 0.7;
+}
+
+.daybook-year-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-year-grid {
+	display: grid;
+	grid-template-columns: 2.6em repeat(31, minmax(0, 1fr));
+	gap: 3px;
+	max-width: 1100px;
+}
+
+.daybook-year-num {
+	text-align: center;
+	font-size: 0.7em;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.daybook-year-month {
+	align-self: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: var(--radius-s);
+}
+
+.daybook-year-month:hover,
+.daybook-year-month:focus-visible {
+	color: var(--text-accent);
+	outline: none;
+}
+
+.daybook-year-day {
+	aspect-ratio: 1;
+	border-radius: 3px;
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+}
+
+.daybook-year-day.is-weekend {
+	background-color: var(--background-secondary);
+}
+
+.daybook-year-day.has-note {
+	background-color: var(--background-modifier-border);
+	border-color: transparent;
+}
+
+.daybook-year-day.has-fill {
+	background: var(--daybook-fill);
+	border-color: transparent;
+}
+
+.daybook-year-day.is-dim {
+	opacity: 0.35;
+}
+
+.daybook-year-day.is-today {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.daybook-year-day:hover {
+	box-shadow: 0 0 0 2px var(--text-muted);
+}
+
+.is-phone .daybook-year-grid {
+	gap: 1px;
+	grid-template-columns: 2.2em repeat(31, minmax(0, 1fr));
+}
+
+/* ---------- Carried tasks ([>]: moved to a later day) ---------- */
+
+.daybook-carried-mark {
+	flex: none;
+	display: inline-flex;
+	color: var(--text-faint);
+}
+
+.daybook-carried-mark.clickable-icon {
+	padding: 0;
+}
+
+.daybook-carried-mark svg {
+	width: 13px;
+	height: 13px;
+}
+
+.daybook-task.is-carried .daybook-task-text,
+.daybook-mini-task.is-carried .daybook-mini-text {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+/* Carry-over bar on today */
+.daybook-carry {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+	padding: var(--size-2-3) var(--size-4-3);
+	border-radius: var(--radius-m);
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+}
+
+.daybook-carry-text {
+	flex: 1;
+	color: var(--text-muted);
+}
+
+.daybook-view button.daybook-carry-btn {
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-3);
+	font-size: var(--font-ui-smaller);
+}
+
+/* ---------- Faint goals from the level above ---------- */
+
+.daybook-parent-goals {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2) var(--size-4-4);
+	margin-top: var(--size-2-2);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-parent-goal {
+	max-width: 32em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.daybook-parent-goal:hover,
+.daybook-parent-goal:focus-visible {
+	color: var(--text-muted);
+	outline: none;
+}
+
+.daybook-parent-goal-label {
+	font-weight: var(--font-semibold);
+}
+
+.daybook-mini-goal {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-style: italic;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ---------- Focus mode: one day, only what's left to do ---------- */
+
+.daybook-view button.daybook-focus-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	margin-right: var(--size-2-2);
+}
+
+.daybook-view button.daybook-focus-btn.is-active {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+.is-daybook-focus .daybook-nav > :not(.daybook-focus-btn),
+.is-daybook-focus .daybook-subtitle,
+.is-daybook-focus .daybook-parent-goals,
+.is-daybook-focus .daybook-day-tags,
+.is-daybook-focus .daybook-chips,
+.is-daybook-focus .daybook-notes,
+.is-daybook-focus .daybook-task.is-done,
+.is-daybook-focus .daybook-task.is-carried,
+.is-daybook-focus .daybook-card-menu,
+.is-daybook-focus .daybook-add-tile {
+	display: none;
+}
+
+.is-daybook-focus .daybook-goals {
+	padding-right: 0;
+}
+
+.is-daybook-focus.daybook-view {
+	padding-left: max(var(--size-4-6), 6%);
+	padding-right: max(var(--size-4-6), 6%);
+}
+
+/* ---------- Carry-over review ---------- */
+
+.daybook-carry-intro {
+	color: var(--text-muted);
+	margin-bottom: var(--size-4-3);
+}
+
+.daybook-carry-tools {
+	display: flex;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-3);
+}
+
+.daybook-carry-list {
+	max-height: 55vh;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	padding-right: var(--size-2-2);
+}
+
+.daybook-carry-card-head,
+.daybook-carry-task {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	cursor: pointer;
+}
+
+.daybook-carry-card-head {
+	font-weight: var(--font-semibold);
+	padding-bottom: var(--size-2-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: var(--size-2-2);
+}
+
+.daybook-carry-count {
+	margin-left: auto;
+	font-weight: normal;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.daybook-carry-task {
+	padding: 2px 0 2px calc(var(--size-4-4) + var(--daybook-depth, 0) * 18px);
+}
+
+.daybook-carry-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--size-2-3);
+	margin-top: var(--size-4-4);
+}
+
+/* ---------- Expanded card fills the Tasks area ---------- */
+
+.daybook-card {
+	position: relative;
+}
+
+/* ⤢ in the corner of the unnamed card */
+.daybook-card-focus.daybook-loose-focus {
+	position: absolute;
+	top: var(--size-2-2);
+	right: var(--size-2-2);
+	z-index: 1;
+}
+
+.daybook-loose-header {
+	justify-content: space-between;
+}
+
+.daybook-loose-title {
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-medium);
+}
+
+/* The expanded card stretches to the bottom of the Tasks area */
+.daybook-board.has-focus {
+	flex: 1 0 auto;
+}
+
+.daybook-board.has-focus > .daybook-cards.is-focus-mode {
+	flex: 1 1 auto;
+	align-items: stretch;
+}
+
+.daybook-cards.is-focus-mode > .daybook-card.is-focused {
+	display: flex;
+	flex-direction: column;
+	min-height: 60vh;
+	cursor: text;
+}
+
+body:not(.is-phone) .is-fill .daybook-cards.is-focus-mode > .daybook-card.is-focused {
+	min-height: 0;
+}
+
+.daybook-cards.is-focus-mode > .daybook-card.is-focused > .daybook-task-list {
+	flex: 1 1 auto;
+}
+
+.daybook-cards-rail {
+	align-self: flex-start;
+}
+
+.daybook-popover .daybook-cards.is-focus-mode > .daybook-card.is-focused {
+	min-height: 0;
+}
+
+.daybook-card.is-loose:not(.is-focused) {
+	padding-right: 30px;
+}
+
+/* ---------- A project on its own (⤢ on its panel) ---------- */
+
+.daybook-lane.is-focused {
+	flex: 1 1 auto;
+	align-items: stretch;
+}
+
+.daybook-lane.is-focused .daybook-lane-panel {
+	flex-basis: 280px;
+}
+
+.daybook-lane.is-focused .daybook-project {
+	border-color: var(--daybook-project-colour);
+}
+
+.daybook-lane.is-focused > .daybook-cards {
+	align-content: start;
+}
+
+.daybook-project-focus.clickable-icon {
+	opacity: 1;
+}
+
+.daybook-rail-label {
+	padding-left: var(--size-2-2);
+	border-left: 3px solid var(--daybook-project-colour, var(--background-modifier-border));
+}
+
+/* ---------- General row: a tall main card, other cards beside it ---------- */
+
+.daybook-lane.daybook-lane-general {
+	flex-direction: row;
+	align-items: stretch;
+	gap: var(--size-4-3);
+}
+
+.daybook-general-main {
+	flex: 0 0 clamp(260px, 36%, 440px);
+	display: flex;
+	min-width: 0;
+}
+
+.daybook-general-main > .daybook-card {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 220px;
+	cursor: text;
+}
+
+.daybook-general-main > .daybook-card > .daybook-task-list {
+	flex: 1 1 auto;
+}
+
+.daybook-general-others {
+	flex: 1 1 0;
+	min-width: 0;
+	align-content: start;
+}
+
+/* Desktop day page: the main card runs down to the projects (or Notes). */
+body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lane-general {
+	flex: 1 1 auto;
+}
+
+@container (max-width: 560px) {
+	.daybook-lane.daybook-lane-general {
+		flex-direction: column;
+	}
+
+	.daybook-general-main {
+		flex: none;
+	}
+
+	.daybook-general-main > .daybook-card {
+		min-height: 160px;
+	}
+}
+
+/* ---------- Events (multi-day: trips, conferences) ---------- */
+
+/* Year: event days underlined in the event's colour; drag selection */
+.daybook-year-day.has-event {
+	box-shadow: inset 0 -3px 0 var(--daybook-event);
+}
+
+.daybook-year-day.has-event.is-today {
+	box-shadow: inset 0 -3px 0 var(--daybook-event), 0 0 0 2px var(--interactive-accent);
+}
+
+.daybook-year-day.is-selecting {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -1px;
+	opacity: 1;
+}
+
+.daybook-year-grid {
+	user-select: none;
+	touch-action: pan-y;
+}
+
+.daybook-year-events {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
+}
+
+.daybook-view button.daybook-add-event {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	margin-right: var(--size-2-2);
+}
+
+.daybook-year-legend .daybook-add-event {
+	margin-left: auto;
+}
+
+/* Week/month cards: a coloured bar per event; name on its first day */
+.daybook-mini {
+	user-select: none;
+}
+
+.daybook-mini.is-selecting {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-mini-events {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0 calc(-1 * var(--size-4-2));
+}
+
+.daybook-event-pill {
+	min-height: 16px;
+	padding: 0 var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	line-height: 16px;
+	color: var(--text-normal);
+	background-color: color-mix(in srgb, var(--daybook-event) 28%, transparent);
+	border-left: 3px solid transparent;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.daybook-event-pill.is-start {
+	border-left-color: var(--daybook-event);
+	border-top-left-radius: 3px;
+	border-bottom-left-radius: 3px;
+}
+
+.daybook-event-pill.is-end {
+	border-top-right-radius: 3px;
+	border-bottom-right-radius: 3px;
+}
+
+.daybook-event-pill:hover {
+	background-color: color-mix(in srgb, var(--daybook-event) 45%, transparent);
+}
+
+/* Day page: "Germany · day 2 of 5" */
+.daybook-event-banners {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-3);
+	margin-top: var(--size-2-3);
+}
+
+.daybook-event-banner {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-m);
+	font-size: var(--font-ui-smaller);
+	background-color: color-mix(in srgb, var(--daybook-event) 18%, transparent);
+	border-left: 3px solid var(--daybook-event);
+	cursor: pointer;
+}
+
+.daybook-event-banner:hover,
+.daybook-event-banner:focus-visible {
+	background-color: color-mix(in srgb, var(--daybook-event) 30%, transparent);
+	outline: none;
+}
+
+.daybook-event-banner svg {
+	width: 13px;
+	height: 13px;
+}
+
+.daybook-event-name {
+	font-weight: var(--font-semibold);
+}
+
+.daybook-event-when {
+	color: var(--text-muted);
+}
+
+/* Sidebar calendar: thin line under event days */
+.daybook-cal-day.has-event::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 3px;
+	background-color: var(--daybook-event);
+}
+
+.daybook-cal-day.has-event.is-event-start::after {
+	left: 3px;
+	border-radius: 2px 0 0 2px;
+}
+
+.daybook-cal-day.has-event.is-event-end::after {
+	right: 3px;
+	border-radius: 0 2px 2px 0;
+}
+
+.daybook-view button.daybook-chip-add {
+	padding: var(--size-2-1) var(--size-2-3);
+	border-style: dashed;
+}
+
+.daybook-chip-add svg {
+	width: 12px;
+	height: 12px;
+}
