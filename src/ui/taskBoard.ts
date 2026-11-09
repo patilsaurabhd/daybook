@@ -13,7 +13,7 @@
 
 import { Component, Menu, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { DateKey } from "../core/dates";
+import { DateKey, todayKey } from "../core/dates";
 import { Task, TaskGroup, TaskPos, blockEnd, emptyGroup, isOpen, moveTask, newTask, removeGroup, shiftDepth } from "../core/day";
 import {
 	CardLink,
@@ -25,7 +25,8 @@ import {
 	sameName,
 } from "../core/project";
 import { ProjectPanel } from "./projectPanel";
-import { RulesModal } from "./recurringModal";
+import { RulesModal, openAddRule } from "./recurringModal";
+import { Rule, ruleId } from "../core/recurring";
 
 /** Project rows are shown only when the board gets this (the day page). */
 export interface ProjectContext {
@@ -35,6 +36,8 @@ export interface ProjectContext {
 	compact?: boolean;
 	newProject: () => void;
 	reloadProjects: () => void;
+	/** A task here was made into a recurring rule: record it so today's copy isn't added twice. */
+	recordRule?: (ruleId: string) => void;
 }
 
 type Focus = { group: number; index: number | "new" | "title"; caret?: "start" | "end" };
@@ -745,6 +748,32 @@ export class TaskBoard extends Component {
 				attr: { "aria-label": "Lines under this task in the note" },
 			});
 		}
+
+		// ⋯ task menu (also right-click on the grip).
+		const more = row.createDiv({ cls: "clickable-icon daybook-task-menu", attr: { role: "button", tabindex: "0", "aria-label": "Task options" } });
+		setIcon(more, "more-horizontal");
+		const open = (evt: MouseEvent) => {
+			evt.preventDefault();
+			this.showTaskMenu(evt, task, this.groups[gi]!);
+		};
+		more.addEventListener("click", open);
+		handle.addEventListener("contextmenu", open);
+	}
+
+	private showTaskMenu(evt: MouseEvent, task: Task, group: TaskGroup): void {
+		const menu = new Menu();
+		menu.addItem((i) =>
+			i
+				.setTitle("Make recurring…")
+				.setIcon("repeat")
+				.setDisabled(!task.text.trim())
+				.onClick(() => {
+					const from = this.projectCtx?.date ?? todayKey();
+					const prefill: Rule = { text: task.text.trim(), freq: { kind: "daily" }, card: group.name, from, paused: false };
+					openAddRule(this.plugin, (rule) => this.projectCtx?.recordRule?.(ruleId(rule)), prefill);
+				}),
+		);
+		menu.showAtMouseEvent(evt);
 	}
 
 	private focus(f: Focus): void {

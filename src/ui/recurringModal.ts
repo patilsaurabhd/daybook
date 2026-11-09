@@ -3,7 +3,7 @@
 
 import { Modal, Notice, Setting, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { Weekday, formatDate, monthName, todayKey, weekdayName } from "../core/dates";
+import { Weekday, formatDate, monthName, todayKey, weekday, weekdayName } from "../core/dates";
 import { weekdayOrder } from "../core/calendar";
 import { Frequency, Rule, describe, formatRule, nextDue } from "../core/recurring";
 import { projectCardName } from "../core/project";
@@ -46,16 +46,20 @@ export class RuleModal extends Modal {
 	private summaryEl!: HTMLElement;
 	private otherCardEl!: HTMLElement;
 
+	/** `initial` with `adding` true prefills a new rule (e.g. from an existing task). */
 	constructor(
 		private plugin: DaybookPlugin,
 		initial: Rule | null,
 		private onSubmit: (rule: Rule) => void,
+		private adding = initial === null,
 	) {
 		super(plugin.app);
 		const today = todayKey();
 		this.rule = initial ? structuredClone(initial) : { text: "", freq: { kind: "daily" }, card: null, from: today, paused: false };
-		const [, m, d] = today.split("-").map(Number);
-		this.weekly = [new Date().getDay() as Weekday];
+		// Weekly/monthly/yearly choices start from the rule's first day.
+		const anchor = this.rule.from || today;
+		const [, m, d] = anchor.split("-").map(Number);
+		this.weekly = [weekday(anchor)];
 		this.monthDay = d!;
 		this.yearMonth = m!;
 		this.yearDay = d!;
@@ -67,7 +71,7 @@ export class RuleModal extends Modal {
 	}
 
 	onOpen(): void {
-		const editing = this.rule.text !== "";
+		const editing = !this.adding;
 		this.setTitle(editing ? "Edit recurring task" : "Add recurring task");
 		const { contentEl } = this;
 		this.modalEl.addClass("daybook-rule-modal");
@@ -372,18 +376,21 @@ export class RulesModal extends Modal {
 	}
 }
 
-/** "Add recurring task" dialog; saves the new rule. */
-export function openAddRule(plugin: DaybookPlugin, after?: () => void): void {
-	new RuleModal(plugin, null, (rule) => {
+/**
+ * "Add recurring task" dialog; saves the new rule. `prefill` starts it from an
+ * existing task; `after` gets the saved rule.
+ */
+export function openAddRule(plugin: DaybookPlugin, after?: (rule: Rule) => void, prefill?: Rule): void {
+	new RuleModal(plugin, prefill ?? null, (rule) => {
 		void plugin.recurring
 			.change((rules) => rules.push(rule))
 			.then(() => {
 				new Notice(`Added: ${rule.text} (${describeRule(rule).toLowerCase()}).`);
-				after?.();
+				after?.(rule);
 			})
 			.catch((e: unknown) => {
 				console.error("Daybook: could not add recurring task", e);
 				new Notice("Daybook could not add the recurring task.");
 			});
-	}).open();
+	}, true).open();
 }

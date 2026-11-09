@@ -326,6 +326,10 @@ export class DayCard extends Component {
 				projects: this.projects,
 				newProject: () => this.newProject(),
 				reloadProjects: () => void this.reloadProjects(true),
+				recordRule: (id) => {
+					if (!this.entry.recurring.includes(id)) this.entry.recurring.push(id);
+					this.changed();
+				},
 			}),
 		);
 

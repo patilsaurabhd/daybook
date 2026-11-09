@@ -100,6 +100,10 @@ export class DayPopover extends Component {
 				compact: true,
 				newProject: () => {},
 				reloadProjects: () => {},
+				recordRule: (id) => {
+					if (!this.entry.recurring.includes(id)) this.entry.recurring.push(id);
+					this.changed();
+				},
 			}),
 		);
 		// Put the cursor in "Add a task" of the first visible card.

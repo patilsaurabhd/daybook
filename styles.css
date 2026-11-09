@@ -2373,3 +2373,31 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	color: var(--text-error);
 	background-color: var(--background-modifier-error);
 }
+
+/* ⋯ menu on a task row (hover; always on touch screens) */
+.daybook-task-menu.clickable-icon {
+	flex: none;
+	padding: 2px;
+	opacity: 0;
+}
+
+.daybook-task:hover .daybook-task-menu,
+.daybook-task:focus-within .daybook-task-menu,
+.daybook-task-menu:focus-visible {
+	opacity: 1;
+}
+
+.daybook-task-menu svg {
+	width: 14px;
+	height: 14px;
+}
+
+@media (hover: none) {
+	.daybook-task-menu.clickable-icon {
+		opacity: 0.6;
+	}
+}
+
+.is-daybook-focus .daybook-task-menu {
+	display: none;
+}
