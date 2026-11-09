@@ -541,3 +541,43 @@ test("carrying doesn't duplicate a task that's already open today", async () => 
 	assert.equal(n, 1);
 	assert.deepEqual(today.groups[0]!.tasks.map((t) => [t.text, t.depth]), [["Stretch", 0], ["Email", 0]]);
 });
+
+test("repeating events", async () => {
+	const E = await import("../src/core/event");
+	assert.deepEqual(E.parseRepeat("every 2 weeks"), { unit: "week", n: 2 });
+	assert.deepEqual(E.parseRepeat("Yearly"), { unit: "year", n: 1 });
+	assert.equal(E.parseRepeat("sometimes"), null);
+	assert.equal(E.formatRepeat({ unit: "month", n: 1 }), "monthly");
+	assert.equal(E.formatRepeat({ unit: "week", n: 2 }), "every 2 weeks");
+
+	// A 3-day yearly conference keeps its length
+	const conf = E.eventFromProps("Conf", { start: "2026-03-30", end: "2026-04-01", repeats: "yearly" })!;
+	assert.deepEqual(conf.repeats, { unit: "year", n: 1 });
+	assert.deepEqual(
+		E.occurrences(conf, "2026-01-01", "2028-12-31").map((o) => [o.start, o.end]),
+		[["2026-03-30", "2026-04-01"], ["2027-03-30", "2027-04-01"], ["2028-03-30", "2028-04-01"]],
+	);
+	// An occurrence reaching into the range from before it counts
+	assert.deepEqual(E.occurrences(conf, "2027-04-01", "2027-04-30").map((o) => o.start), ["2027-03-30"]);
+	assert.deepEqual(E.occurrences(conf, "2027-04-01", "2027-04-01")[0]!.series, { start: "2026-03-30", end: "2026-04-01" });
+
+	// 29 Feb birthdays fall on 28 Feb; the 31st falls back in short months
+	const bday = E.eventFromProps("B", { start: "2028-02-29", repeats: "yearly" })!;
+	assert.deepEqual(E.occurrences(bday, "2028-01-01", "2032-12-31").map((o) => o.start), ["2028-02-29", "2029-02-28", "2030-02-28", "2031-02-28", "2032-02-29"]);
+	const monthly = E.eventFromProps("M", { start: "2026-01-31", repeats: "monthly" })!;
+	assert.deepEqual(E.occurrences(monthly, "2026-01-01", "2026-04-30").map((o) => o.start), ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+
+	// Every 2 weeks, until a date; nothing before the first one
+	const fortnight = E.eventFromProps("F", { start: "2026-11-09", repeats: "every 2 weeks", until: "2026-12-07" })!;
+	assert.deepEqual(E.occurrences(fortnight, "2026-01-01", "2027-12-31").map((o) => o.start), ["2026-11-09", "2026-11-23", "2026-12-07"]);
+
+	// Written to and read back from the note; turning repeat off removes the keys
+	const text = E.applyEvent("", fortnight);
+	assert.match(text, /repeats: every 2 weeks\nuntil: 2026-12-07\n/);
+	assert.deepEqual(E.parseEvent("F", text), fortnight);
+	assert.doesNotMatch(E.applyEvent(text, { ...fortnight, repeats: null }), /repeats|until/);
+
+	// One list for views, repeating ones expanded and sorted
+	const once = E.eventFromProps("Trip", { start: "2026-11-20", end: "2026-11-22" })!;
+	assert.deepEqual(E.expandEvents([fortnight, once], "2026-11-01", "2026-11-30").map((o) => `${o.name} ${o.start}`), ["F 2026-11-09", "Trip 2026-11-20", "F 2026-11-23"]);
+});

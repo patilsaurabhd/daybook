@@ -8,13 +8,15 @@ Daybook/2026/11/2026-11.md       month goals, reflection
 Daybook/2026/2026.md             year goals, reflection
 Daybook/2026/Weeks/2026-W46.md   week goals, reflection
 Daybook/Projects/Website.md      project: status, dates, colour, ## Milestones, ## Notes
-Daybook/Events/Germany.md        event: start, end, category, ## Notes
+Daybook/Events/Germany.md        event: start, end, category, optional repeats/until, ## Notes
 Daybook/Recurring.md             recurring task rules (one per line, written by the dialog)
 ```
 
 A day's task card belongs to a project when its heading links to it: `### [[Website]]`. Active projects show on every day from their start date until they're finished.
 
-Recurring tasks ("Pay rent, every month on the 1st") are managed in a dialog (↻ in the Tasks header, or the "Recurring tasks" command). On today and later days, due rules show up as tasks; they're saved into the day with its first edit, and the day remembers them in a `recurring` property so they're never added twice. Past days are left alone. A day-of-month that a month doesn't have (31st, 29 Feb) falls on that month's last day.
+Recurring tasks ("Pay rent, every month on the 1st") are managed in a dialog (↻ in the Tasks header, or the "Recurring tasks" command). On today and later days, due rules show up as tasks; they're saved into the day with its first edit, and the day remembers them in a `recurring` property so they're never added twice. Past days are left alone. A day-of-month that a month doesn't have (31st, 29 Feb) falls on that month's last day. Any task can be turned into a recurring one from its ⋯ menu ("Make recurring…").
+
+Events can repeat every week, every 2 weeks, every month or every year, optionally until a date (`repeats: yearly`, `until: 2030-12-31`). Each occurrence keeps the event's length and shows in every view; editing or deleting applies to the whole series.
 
 Files are created on your first keystroke, never just by opening a day. Daybook only rewrites the `tags` property and the `## Goals`, `## Tasks` and `## Diary` sections; anything else you put in a note is kept.
 

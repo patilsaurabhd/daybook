@@ -82,7 +82,7 @@ export class CompactDayCard {
 			}
 		});
 
-		const events = eventsOn(this.plugin.events.all(), this.date);
+		const events = eventsOn(this.plugin.events.between(this.date, this.date), this.date);
 		if (events.length) {
 			const bars = el.createDiv({ cls: "daybook-mini-events" });
 			const { day } = parseKey(this.date);

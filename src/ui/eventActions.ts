@@ -3,7 +3,7 @@
 import { App, Menu, Modal, Notice, Setting, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
 import { DateKey, formatDate, isDateKey } from "../core/dates";
-import { DayEvent, dayOf, eventCategory, orderRange } from "../core/event";
+import { DayEvent, EventRepeat, dayOf, eventCategory, orderRange } from "../core/event";
 import { CategoryModal, addCategory } from "./categoryModal";
 
 /** Colour for an event: its category's colour, or the accent colour. */
@@ -29,6 +29,25 @@ interface EventFields {
 	start: DateKey;
 	end: DateKey;
 	category: string;
+	repeats: EventRepeat | null;
+	until: DateKey;
+}
+
+const REPEAT_CHOICES: { value: string; label: string; repeat: EventRepeat }[] = [
+	{ value: "week", label: "Every week", repeat: { unit: "week", n: 1 } },
+	{ value: "2week", label: "Every 2 weeks", repeat: { unit: "week", n: 2 } },
+	{ value: "month", label: "Every month", repeat: { unit: "month", n: 1 } },
+	{ value: "year", label: "Every year", repeat: { unit: "year", n: 1 } },
+];
+
+function repeatValue(r: EventRepeat | null | undefined): string {
+	if (!r) return "year";
+	return REPEAT_CHOICES.find((c) => c.repeat.unit === r.unit && c.repeat.n === r.n)?.value ?? "year";
+}
+
+/** "every year", "every 2 weeks" (for labels). */
+export function repeatLabel(r: EventRepeat): string {
+	return r.n === 1 ? `every ${r.unit}` : `every ${r.n} ${r.unit}s`;
 }
 
 class EventModal extends Modal {
@@ -68,6 +87,37 @@ class EventModal extends Modal {
 			t.inputEl.type = "date";
 			t.setValue(this.fields.end).onChange((v) => (this.fields.end = v));
 		});
+
+		// Repeats: a checkbox, then how often and (optionally) until when.
+		const repeatOptions = createDiv();
+		new Setting(contentEl)
+			.setName("Repeats")
+			.setDesc("Each time keeps the same length. A date a month or year doesn't have (the 31st, a leap day) moves to the last day of that month.")
+			.addToggle((t) =>
+				t.setValue(this.fields.repeats !== null).onChange((on) => {
+					this.fields.repeats = on ? (REPEAT_CHOICES.find((c) => c.value === repeatValue(null))?.repeat ?? null) : null;
+					renderRepeat(on);
+				}),
+			);
+		contentEl.appendChild(repeatOptions);
+		const renderRepeat = (on: boolean) => {
+			repeatOptions.empty();
+			if (!on) return;
+			new Setting(repeatOptions).setName("How often").addDropdown((d) => {
+				for (const c of REPEAT_CHOICES) d.addOption(c.value, c.label);
+				d.setValue(repeatValue(this.fields.repeats)).onChange((v) => {
+					this.fields.repeats = REPEAT_CHOICES.find((c) => c.value === v)?.repeat ?? null;
+				});
+			});
+			new Setting(repeatOptions)
+				.setName("Until")
+				.setDesc("Optional. Leave empty to keep repeating.")
+				.addText((t) => {
+					t.inputEl.type = "date";
+					t.setValue(this.fields.until).onChange((v) => (this.fields.until = v));
+				});
+		};
+		renderRepeat(this.fields.repeats !== null);
 		new Setting(contentEl)
 			.setName("Category")
 			.setDesc("Colours the event, and counts its days in the year view.")
@@ -115,8 +165,9 @@ class EventModal extends Modal {
 			return;
 		}
 		const [start, end] = orderRange(f.start, f.end || f.start);
+		const until = f.repeats && isDateKey(f.until) ? f.until : "";
 		this.close();
-		this.onSubmit({ ...f, start, end });
+		this.onSubmit({ ...f, start, end, until });
 	}
 
 	onClose(): void {
@@ -158,11 +209,12 @@ class ConfirmModal extends Modal {
 
 /** "New event" dialog, prefilled with a date range (e.g. from a drag). */
 export function newEvent(plugin: DaybookPlugin, start: DateKey, end: DateKey): void {
-	new EventModal(plugin, { name: "", start, end, category: "" }, false, (f) => {
+	new EventModal(plugin, { name: "", start, end, category: "", repeats: null, until: "" }, false, (f) => {
 		void (async () => {
 			try {
-				const name = await plugin.events.create(f.name, f.start, f.end, f.category);
-				new Notice(`Added ${name} (${eventRangeLabel({ name, start: f.start, end: f.end, category: f.category })}).`);
+				const name = await plugin.events.create(f.name, f.start, f.end, f.category, f.repeats, f.until);
+				const when = eventRangeLabel({ name, start: f.start, end: f.end, category: f.category });
+				new Notice(`Added ${name} (${when}${f.repeats ? `, ${repeatLabel(f.repeats)}` : ""}).`);
 			} catch (e) {
 				console.error("Daybook: could not create event", e);
 				new Notice("Daybook could not create the event.");
@@ -177,15 +229,22 @@ export function showEventMenu(plugin: DaybookPlugin, e: DayEvent, evt: MouseEven
 	menu.addItem((i) => i.setTitle("Open event note").setIcon("file-text").onClick(() => void plugin.events.open(e.name, false)));
 	menu.addItem((i) =>
 		i
-			.setTitle("Change dates or category")
+			.setTitle(e.repeats ? "Change dates, repeat or category (all)" : "Change dates, repeat or category")
 			.setIcon("calendar-range")
 			.onClick(() =>
-				new EventModal(plugin, { ...e }, true, (f) => {
+				// A repeating event is edited as a whole series, from its first dates.
+				new EventModal(
+					plugin,
+					{ name: e.name, category: e.category, start: e.series?.start ?? e.start, end: e.series?.end ?? e.end, repeats: e.repeats ?? null, until: e.until ?? "" },
+					true,
+					(f) => {
 					void plugin.events
 						.update(e.name, (x) => {
 							x.start = f.start;
 							x.end = f.end;
 							x.category = f.category;
+							x.repeats = f.repeats;
+							x.until = f.until;
 						})
 						.catch((err: unknown) => {
 							console.error("Daybook: could not update event", err);
@@ -196,7 +255,7 @@ export function showEventMenu(plugin: DaybookPlugin, e: DayEvent, evt: MouseEven
 	);
 	menu.addItem((i) =>
 		i
-			.setTitle("Delete event")
+			.setTitle(e.repeats ? "Delete event (every time)" : "Delete event")
 			.setIcon("trash")
 			.onClick(() =>
 				new ConfirmModal(plugin.app, `Delete ${e.name}?`, "Its note moves to the trash. Day notes are not touched.", "Delete", () => {
@@ -236,6 +295,7 @@ export function renderEventBanner(plugin: DaybookPlugin, parent: HTMLElement, e:
 	setIcon(b.createSpan({ cls: "daybook-layout-icon" }), "calendar-range");
 	b.createSpan({ cls: "daybook-event-name", text: e.name });
 	const { day, total } = dayOf(e, date);
-	b.createSpan({ cls: "daybook-event-when", text: total > 1 ? `day ${day} of ${total} · ${eventRangeLabel(e)}` : eventRangeLabel(e) });
+	const when = total > 1 ? `day ${day} of ${total} · ${eventRangeLabel(e)}` : eventRangeLabel(e);
+	b.createSpan({ cls: "daybook-event-when", text: e.repeats ? `${when} · ${repeatLabel(e.repeats)}` : when });
 	b.addEventListener("click", (evt) => showEventMenu(plugin, e, evt));
 }

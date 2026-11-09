@@ -8,8 +8,8 @@ import type DaybookPlugin from "../main";
 import { DateKey, formatDate, monthName, parseKey, todayKey, weekday } from "../core/dates";
 import { dayKeyFromPath } from "../core/paths";
 import { boxFill, categoriesFor, countByCategory, yearRows } from "../core/year";
-import { DayEvent, eventDates, eventsOn, eventsOverlapping, orderRange } from "../core/event";
-import { eventColour, eventRangeLabel, newEvent, showEventMenu } from "./eventActions";
+import { DayEvent, eventDates, eventsOn, orderRange } from "../core/event";
+import { eventColour, eventRangeLabel, newEvent, repeatLabel, showEventMenu } from "./eventActions";
 import { yearDayTags } from "../obsidian/store";
 
 export class YearBoard extends Component {
@@ -63,7 +63,8 @@ export class YearBoard extends Component {
 		const locale = moment.locale();
 		const today = todayKey();
 		const tagsByDay = yearDayTags(this.plugin.app, rootFolder, year, (p) => dayKeyFromPath(rootFolder, p));
-		const events = eventsOverlapping(this.plugin.events.all(), `${year}-01-01`, `${year}-12-31`);
+		// Every occurrence in this year (repeating events expanded).
+		const events = this.plugin.events.between(`${year}-01-01`, `${year}-12-31`);
 		// Event categories count as that day's category too (day notes untouched).
 		const catTags = new Map<DateKey, string[]>();
 		for (const [d, tags] of tagsByDay) catTags.set(d, [...tags]);
@@ -168,11 +169,18 @@ export class YearBoard extends Component {
 		const wrap = el.createDiv({ cls: "daybook-year-events" });
 		wrap.createDiv({ cls: "daybook-lane-label", text: "Events" });
 		const list = wrap.createDiv({ cls: "daybook-chips" });
+		// A repeating event is listed once, with how often it repeats.
+		const seen = new Set<string>();
 		for (const e of events) {
+			if (e.repeats) {
+				if (seen.has(e.name)) continue;
+				seen.add(e.name);
+			}
 			const b = list.createEl("button", { cls: "daybook-filter-chip daybook-event-chip" });
 			b.createSpan({ cls: "daybook-chip-dot is-filled" }).setCssProps({ "--daybook-cat-color": eventColour(this.plugin, e) });
 			b.createSpan({ text: e.name });
-			b.createSpan({ cls: "daybook-chip-count", text: eventRangeLabel(e) });
+			b.createSpan({ cls: "daybook-chip-count", text: e.repeats ? `${repeatLabel(e.repeats)} · ${eventRangeLabel(e)}` : eventRangeLabel(e) });
+			if (e.repeats) setIcon(b.createSpan({ cls: "daybook-layout-icon daybook-event-repeat" }), "repeat");
 			b.addEventListener("click", (evt) => showEventMenu(this.plugin, e, evt));
 		}
 	}

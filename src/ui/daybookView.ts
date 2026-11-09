@@ -387,7 +387,7 @@ export class DaybookView extends ItemView {
 			weekLink.addEventListener("click", () => this.navigate("week", this.date));
 			this.monthLink(sub, this.date);
 			if (this.date === todayKey()) sub.createSpan({ cls: "daybook-today-badge", text: "Today" });
-			const events = eventsOn(this.plugin.events.all(), this.date);
+			const events = eventsOn(this.plugin.events.between(this.date, this.date), this.date);
 			if (events.length) {
 				const banners = titleWrap.createDiv({ cls: "daybook-event-banners" });
 				for (const e of events) renderEventBanner(this.plugin, banners, e, this.date);

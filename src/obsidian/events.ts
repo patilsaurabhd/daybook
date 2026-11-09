@@ -3,7 +3,7 @@
 
 import { App, TFile, normalizePath } from "obsidian";
 import { DateKey } from "../core/dates";
-import { DayEvent, applyEvent, eventFromProps, parseEvent } from "../core/event";
+import { DayEvent, EventRepeat, applyEvent, eventFromProps, expandEvents, parseEvent } from "../core/event";
 import { eventPath, eventsFolder } from "../core/paths";
 import { cleanProjectName } from "../core/project";
 import { VaultStore } from "./store";
@@ -42,12 +42,17 @@ export class EventStore {
 		return out;
 	}
 
+	/** Every occurrence (repeating events expanded) overlapping [from, to]. */
+	between(from: DateKey, to: DateKey): DayEvent[] {
+		return expandEvents(this.all(), from, to);
+	}
+
 	/** Creates an event note; a taken name gets " 2", " 3"… Returns the name used. */
-	async create(rawName: string, start: DateKey, end: DateKey, category: string): Promise<string> {
+	async create(rawName: string, start: DateKey, end: DateKey, category: string, repeats: EventRepeat | null = null, until = ""): Promise<string> {
 		const base = cleanProjectName(rawName) || "Event";
 		let name = base;
 		for (let n = 2; this.store.exists(this.pathOf(name)); n++) name = `${base} ${n}`;
-		await this.store.write(this.pathOf(name), (old) => applyEvent(old, { name, start, end, category }));
+		await this.store.write(this.pathOf(name), (old) => applyEvent(old, { name, start, end, category, repeats, until }));
 		return name;
 	}
 

@@ -3,7 +3,7 @@
 
 import { ItemView, WorkspaceLeaf, debounce, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { addMonths, monthName, parseKey, todayKey, weekdayName, weekDays } from "../core/dates";
+import { addDays, addMonths, monthName, parseKey, todayKey, weekdayName, weekDays } from "../core/dates";
 import { monthGrid, weekdayOrder } from "../core/calendar";
 import { dayPath } from "../core/paths";
 import { Selection, ZoomLevel } from "../core/types";
@@ -131,7 +131,8 @@ export class CalendarView extends ItemView {
 		}
 
 		const selectedWeek = sel.level === "week" ? weekDays(sel.date, firstDayOfWeek) : [];
-		const allEvents = this.plugin.events.all();
+		// Occurrences around this month (repeating events expanded).
+		const allEvents = this.plugin.events.between(addDays(firstOfMonth, -7), addDays(firstOfMonth, 42));
 
 		for (const row of monthGrid(this.year, this.month, firstDayOfWeek)) {
 			const rowSelected = row.days.some((d) => selectedWeek.includes(d.key));
