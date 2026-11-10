@@ -84,6 +84,10 @@ export interface DayEntry {
 	notes: string;
 	/** Recurring rules already added to this day (property "recurring"), so they're never added twice. */
 	recurring: string[];
+	/** Habits done this day (property "habits"), as habit keys (lower-case names). */
+	habits: string[];
+	/** Habits added for this day only (property "habits-extra"), as typed. */
+	habitsExtra: string[];
 }
 
 /** Anything with task cards: a day note, or the Scratchpad. */
@@ -94,7 +98,7 @@ export function emptyGroup(name: string | null): TaskGroup {
 }
 
 export function emptyDay(): DayEntry {
-	return { tags: [], goals: "", groups: [emptyGroup(null)], diary: "", notes: "", recurring: [] };
+	return { tags: [], goals: "", groups: [emptyGroup(null)], diary: "", notes: "", recurring: [], habits: [], habitsExtra: [] };
 }
 
 export function newTask(text: string, depth = 0): Task {
@@ -286,6 +290,8 @@ export function parseDay(text: string): DayEntry {
 		diary: readSection(body, DIARY_HEADING) ?? "",
 		notes: readSection(body, NOTES_HEADING) ?? "",
 		recurring: readYamlList(frontmatter, "recurring"),
+		habits: readYamlList(frontmatter, "habits").map((h) => h.trim().toLowerCase()),
+		habitsExtra: readYamlList(frontmatter, "habits-extra"),
 	};
 }
 
@@ -301,6 +307,13 @@ export function applyDay(text: string, entry: DayEntry): string {
 	// Only written once a recurring task has been added to this day.
 	if (entry.recurring.length || hasYamlKey(frontmatter, "recurring")) {
 		frontmatter = setYamlKey(frontmatter, "recurring", yamlListLines("recurring", [...new Set(entry.recurring)]));
+	}
+	// Habit ticks: only written once a habit has been ticked (or the key exists).
+	if (entry.habits.length || hasYamlKey(frontmatter, "habits")) {
+		frontmatter = setYamlKey(frontmatter, "habits", yamlListLines("habits", [...new Set(entry.habits)]));
+	}
+	if (entry.habitsExtra.length || hasYamlKey(frontmatter, "habits-extra")) {
+		frontmatter = setYamlKey(frontmatter, "habits-extra", yamlListLines("habits-extra", [...new Set(entry.habitsExtra)]));
 	}
 	if (body.trim() === "") body = "";
 	body = writeSection(body, GOALS_HEADING, entry.goals, TASKS_HEADING);

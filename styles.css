@@ -2985,3 +2985,377 @@ body:not(.is-phone) .is-fill .daybook-week .daybook-mini {
 	width: 12px;
 	height: 12px;
 }
+
+/* ---------- Day page: Notes at the bottom of the tasks, Habits at the bottom right ---------- */
+
+/* Notes (and, in the Tasks layout, Habits beside it) under the task cards. */
+.daybook-tasks-bottom {
+	display: flex;
+	align-items: stretch;
+	gap: var(--size-4-6);
+	margin-top: var(--size-4-6);
+	padding-top: var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.daybook-tasks-bottom > .daybook-notes {
+	flex: 1 1 0;
+	min-width: 0;
+	margin-top: 0;
+	padding-top: 0;
+	border-top: none;
+}
+
+.daybook-tasks-bottom > .daybook-habits {
+	flex: 0 0 auto;
+	align-self: flex-end;
+}
+
+/* Habits: a small box in the bottom-right corner (of the diary, or beside Notes). */
+.daybook-habits {
+	box-sizing: border-box;
+	width: min(300px, 100%);
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-primary);
+}
+
+.daybook-pane-diary > .daybook-habits {
+	margin-top: var(--size-4-6);
+	margin-left: auto;
+	align-self: flex-end;
+}
+
+/* Desktop: Notes keep the bottom third of the tasks column; the diary runs
+   down to the Habits box. */
+body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-tasks-bottom {
+	flex: 0 0 33%;
+	min-height: 140px;
+}
+
+body:not(.is-phone) .is-fill .daybook-tasks-bottom > .daybook-notes {
+	flex: 1 1 0;
+	min-height: 0;
+	margin-top: 0;
+}
+
+body:not(.is-phone) .is-fill .daybook-tasks-bottom.is-notes-collapsed {
+	flex: 0 0 auto;
+	min-height: 0;
+}
+
+body:not(.is-phone) .is-fill .daybook-tasks-bottom > .daybook-habits {
+	overflow-y: auto;
+}
+
+body:not(.is-phone) .is-fill .daybook-day:not(.is-diary-hidden) .daybook-pane-diary {
+	display: flex;
+	flex-direction: column;
+}
+
+body:not(.is-phone) .is-fill .daybook-pane-diary > .daybook-habits {
+	margin-top: auto;
+	flex: none;
+}
+
+@container (max-width: 560px) {
+	.daybook-tasks-bottom {
+		flex-direction: column;
+	}
+
+	.daybook-tasks-bottom > .daybook-habits {
+		flex: none;
+		align-self: flex-end;
+	}
+}
+
+/* ---------- Habits box ---------- */
+
+.daybook-habits-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--size-2-2);
+}
+
+.daybook-habits-head .daybook-pane-title {
+	margin-bottom: 0;
+}
+
+.daybook-habits-menu.clickable-icon {
+	padding: 2px;
+}
+
+.daybook-habits-menu svg {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-habits-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+/* Many habits: two columns of compact chips. */
+.daybook-habits-list.is-many {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 2px var(--size-4-2);
+}
+
+.daybook-habit {
+	--daybook-habit-colour: var(--text-faint);
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	padding: 2px var(--size-2-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-small);
+}
+
+.daybook-habit:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-habit .task-list-item-checkbox {
+	flex: none;
+	margin: 0;
+}
+
+.daybook-habit-dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--daybook-habit-colour);
+}
+
+.daybook-habit.is-one-day .daybook-habit-dot {
+	background-color: transparent;
+	border: 1.5px dashed var(--text-faint);
+}
+
+.daybook-habit-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-habit.is-done .daybook-habit-name {
+	color: var(--text-muted);
+}
+
+.daybook-habit-count {
+	flex: none;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.daybook-habit-action.clickable-icon {
+	flex: none;
+	padding: 2px;
+	opacity: 0;
+}
+
+.daybook-habit:hover .daybook-habit-action,
+.daybook-habit-action:focus-visible {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.daybook-habit-action.clickable-icon {
+		opacity: 0.6;
+	}
+}
+
+.daybook-habit-action svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-view input.daybook-habit-add {
+	width: 100%;
+	margin-top: var(--size-2-3);
+	font-size: var(--font-ui-small);
+	background: transparent;
+	border: 1px dashed var(--background-modifier-border);
+	box-shadow: none;
+}
+
+/* Stacked columns (a narrow Daybook pane): each column is as tall as its
+   content and the page scrolls as one, so Notes can't spill over the Diary. */
+@container (max-width: 560px) {
+	body:not(.is-phone) .is-fill .daybook-panes > .daybook-pane {
+		flex: none;
+		overflow: visible;
+	}
+
+	body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-tasks-bottom,
+	body:not(.is-phone) .is-fill .daybook-tasks-bottom > .daybook-notes {
+		flex: none;
+		min-height: 0;
+	}
+}
+
+/* ---------- Week page: habit table at the bottom ----------
+   Habits as rows, the week's days as columns, a count per row.
+   Click a cell to tick that habit on that day. */
+
+.daybook-week-habits {
+	container-type: inline-size;
+	margin-top: var(--size-4-3);
+	padding: var(--size-4-2) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+}
+
+/* A fixed 30% of the page; scrolls inside so it never grows into the task columns. */
+body:not(.is-phone) .is-fill .daybook-week-habits {
+	flex: 0 0 30%;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.daybook-week-habits-grid {
+	display: grid;
+	grid-template-columns: minmax(56px, 200px) repeat(7, minmax(20px, 56px)) auto;
+	justify-content: start;
+	gap: 3px;
+	align-items: center;
+	margin-top: var(--size-4-1);
+}
+
+.daybook-wh-day {
+	text-align: center;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.2;
+	overflow: hidden;
+}
+
+.daybook-wh-day.is-today {
+	color: var(--text-accent);
+	font-weight: var(--font-semibold);
+}
+
+.daybook-wh-countcol,
+.daybook-wh-count {
+	text-align: right;
+	padding-left: var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.daybook-wh-name {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	min-width: 0;
+	font-size: var(--font-ui-small);
+}
+
+.daybook-wh-name .daybook-habit-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-wh-cell {
+	height: 26px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-hover);
+	cursor: var(--cursor);
+	color: var(--text-on-accent);
+}
+
+.daybook-wh-cell.is-today {
+	box-shadow: inset 0 0 0 1px var(--text-accent);
+}
+
+.daybook-wh-cell:hover {
+	background: var(--background-modifier-active-hover);
+}
+
+.daybook-wh-cell.is-done {
+	background: var(--daybook-habit-colour);
+}
+
+.daybook-wh-cell.is-done:hover {
+	opacity: 0.85;
+}
+
+.daybook-wh-cell:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.daybook-wh-cell .svg-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.daybook-wh-narrow {
+	display: none;
+}
+
+@container (max-width: 420px) {
+	.daybook-wh-short {
+		display: none;
+	}
+
+	.daybook-wh-narrow {
+		display: inline;
+	}
+}
+
+/* Month page: a small square per day of the month. */
+.daybook-week-habits.is-month .daybook-week-habits-grid {
+	grid-template-columns: minmax(56px, 180px) repeat(var(--daybook-habit-days), minmax(12px, 18px)) auto;
+	gap: 2px;
+}
+
+.daybook-week-habits.is-month .daybook-wh-day {
+	font-size: var(--font-ui-smallest);
+	overflow: visible;
+	white-space: nowrap;
+}
+
+.daybook-week-habits.is-month .daybook-wh-cell {
+	height: auto;
+	aspect-ratio: 1;
+	border-radius: 3px;
+}
+
+/* Too narrow for a square per day: scroll sideways rather than squash. */
+.daybook-week-habits.is-month {
+	overflow-x: auto;
+}
+
+/* Year page: habit chips under the category legend, habits in Year in numbers. */
+.daybook-year-legend.daybook-year-habits {
+	margin-top: var(--size-2-3);
+}
+
+.daybook-year-legend-label {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-faint);
+	margin-right: var(--size-2-2);
+}
+
+.daybook-stat-sub {
+	margin-top: var(--size-4-3);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-weight: var(--font-semibold);
+}

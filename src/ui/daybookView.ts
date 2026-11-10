@@ -16,10 +16,13 @@ import {
 	weekIdFor,
 	weekDays,
 	formatRange,
+	daysInMonth,
+	toKey,
 } from "../core/dates";
 import { DayLayout, Selection, ZoomLevel } from "../core/types";
 import { DayCard } from "./dayCard";
 import { MonthBoard, WeekBoard } from "./weekView";
+import { HabitTable } from "./habitTable";
 import { PeriodNote } from "./periodNote";
 import { monthPath, weekPath, yearPath } from "../core/paths";
 import { YearBoard } from "./yearView";
@@ -38,6 +41,8 @@ export class DaybookView extends ItemView {
 	private card: DayCard | null = null;
 	private board: WeekBoard | MonthBoard | YearBoard | null = null;
 	private goals: PeriodNote | null = null;
+	/** Week and month views' habit table at the bottom. */
+	private habits: HabitTable | null = null;
 	/** Week view's tasks/reflection container. */
 	private splitEl: HTMLElement | null = null;
 
@@ -178,6 +183,10 @@ export class DaybookView extends ItemView {
 			await goals.flush();
 			this.removeChild(goals);
 		}
+		if (this.habits) {
+			this.removeChild(this.habits);
+			this.habits = null;
+		}
 		if (this.board) {
 			this.removeChild(this.board);
 			this.board = null;
@@ -217,6 +226,9 @@ export class DaybookView extends ItemView {
 			await this.renderPeriod(body, weekPath(this.plugin.settings.rootFolder, week), "week", (pane) =>
 				new WeekBoard(this.plugin, pane, this.date, (date) => this.navigate("day", date)),
 			);
+			// Habits: one row each, the week's days as columns, at the bottom.
+			const days = weekDays(this.date, this.plugin.settings.firstDayOfWeek);
+			this.habits = this.addChild(new HabitTable(this.plugin, body.createDiv(), days, "week"));
 		} else if (this.level === "month") {
 			const { year, month } = parseKey(this.date);
 			await this.renderPeriod(body, monthPath(this.plugin.settings.rootFolder, year, month), "month", (pane) =>
@@ -228,6 +240,9 @@ export class DaybookView extends ItemView {
 					(date) => this.navigate("week", date),
 				),
 			);
+			// Habits: one row each, a small square per day of the month, at the bottom.
+			const monthDays = Array.from({ length: daysInMonth(year, month) }, (_, i) => toKey(year, month, i + 1));
+			this.habits = this.addChild(new HabitTable(this.plugin, body.createDiv(), monthDays, "month"));
 		} else {
 			const { year } = parseKey(this.date);
 			await this.renderPeriod(body, yearPath(this.plugin.settings.rootFolder, year), "year", (pane) =>

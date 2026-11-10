@@ -6,6 +6,7 @@ import { ProjectStore } from "./obsidian/projects";
 import { EventStore } from "./obsidian/events";
 import { RecurringStore } from "./obsidian/recurring";
 import { ScratchpadStore } from "./obsidian/scratchpad";
+import { HabitStore } from "./obsidian/habits";
 import { DaybookSettingTab } from "./obsidian/settingsTab";
 import { CalendarView, VIEW_TYPE_CALENDAR } from "./ui/calendarView";
 import { DaybookView, VIEW_TYPE_DAYBOOK } from "./ui/daybookView";
@@ -27,6 +28,9 @@ export default class DaybookPlugin extends Plugin {
 	events!: EventStore;
 	recurring!: RecurringStore;
 	scratchpad!: ScratchpadStore;
+	habits!: HabitStore;
+	/** Bumped whenever Habits.md changes, so habit boxes can redraw. */
+	habitsVersion = 0;
 	/** Bumped whenever Scratchpad.md changes, so the sidebar and page can redraw. */
 	scratchpadVersion = 0;
 	/** Tasks added from recurring rules that aren't saved into their day yet. */
@@ -60,6 +64,15 @@ export default class DaybookPlugin extends Plugin {
 		this.events = new EventStore(this.app, this.store, () => this.settings.rootFolder);
 		this.recurring = new RecurringStore(this.store, () => this.settings.rootFolder);
 		this.scratchpad = new ScratchpadStore(this.store, () => this.settings.rootFolder);
+		this.habits = new HabitStore(this.app, this.store, () => this.settings.rootFolder);
+		const habitsChanged = debounce(() => {
+			this.habitsVersion++;
+			this.notify();
+		}, 300, true);
+		const isHabits = (path: string) => path === this.habits.path();
+		this.registerEvent(this.app.vault.on("modify", (file) => isHabits(file.path) && habitsChanged()));
+		this.registerEvent(this.app.vault.on("create", (file) => isHabits(file.path) && habitsChanged()));
+		this.registerEvent(this.app.vault.on("delete", (file) => isHabits(file.path) && habitsChanged()));
 		const padChanged = debounce(() => {
 			this.scratchpadVersion++;
 			this.notify();

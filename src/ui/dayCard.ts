@@ -18,6 +18,7 @@ import {
 	takeOpenTasks,
 } from "../core/day";
 import { CarryModal } from "./carryModal";
+import { HabitBox } from "./habitBox";
 import { addRuleTasks, pendingRules } from "../core/recurring";
 import { CategoryModal, addCategory, tagFromName } from "./categoryModal";
 import { dayKeyFromPath, dayPath } from "../core/paths";
@@ -229,7 +230,23 @@ export class DayCard extends Component {
 		const layout = this.plugin.settings.dayLayout;
 		this.containerEl.toggleClass("is-diary-hidden", layout === "tasks");
 		this.containerEl.toggleClass("is-tasks-hidden", layout === "diary");
+		this.placeHabits();
 		this.board?.relayout();
+	}
+
+	private habitsEl: HTMLElement | null = null;
+	private tasksBottomEl: HTMLElement | null = null;
+	private diaryPaneEl: HTMLElement | null = null;
+
+	/**
+	 * Habits sit in the bottom-right corner of the diary column (Both, Diary).
+	 * The Tasks layout is for tasks only, so they're not shown there.
+	 */
+	private placeHabits(): void {
+		const el = this.habitsEl;
+		if (!el || !this.diaryPaneEl) return;
+		if (this.plugin.settings.dayLayout === "tasks") el.detach();
+		else if (el.parentElement !== this.diaryPaneEl) this.diaryPaneEl.appendChild(el);
 	}
 
 	/** True while the user is typing in this card. */
@@ -384,6 +401,11 @@ export class DayCard extends Component {
 			}),
 		);
 
+		// Notes belong to the tasks: at the bottom of the tasks column (so the
+		// Diary layout, which hides the tasks, has no Notes).
+		const tasksBottom = tasksPane.createDiv({ cls: "daybook-tasks-bottom" });
+		this.renderNotes(tasksBottom.createDiv({ cls: "daybook-notes" }));
+
 		const diaryPane = panes.createDiv({ cls: "daybook-pane daybook-pane-diary" });
 		diaryPane.createDiv({ cls: "daybook-pane-title", text: "Diary" });
 		this.addBox(diaryPane, {
@@ -398,7 +420,13 @@ export class DayCard extends Component {
 			images: { store: this.plugin.store, beforeSave: () => this.ensureNoteExists() },
 		});
 
-		this.renderNotes(el.createDiv({ cls: "daybook-notes" }));
+		// Habits in the bottom-right corner of the diary column (not in the
+		// Tasks layout; see placeHabits).
+		this.habitsEl = createDiv();
+		this.tasksBottomEl = tasksBottom;
+		this.diaryPaneEl = diaryPane;
+		this.addChild(new HabitBox(this.plugin, this.habitsEl, this.entry, this.date, () => this.changed()));
+		this.placeHabits();
 	}
 
 	/** The Notes box along the bottom; collapsible (remembered). */
@@ -415,6 +443,7 @@ export class DayCard extends Component {
 		const sync = () => {
 			const collapsed = this.plugin.settings.notesCollapsed;
 			strip.toggleClass("is-collapsed", collapsed);
+			strip.parentElement?.toggleClass("is-notes-collapsed", collapsed);
 			setIcon(chevron, collapsed ? "chevron-right" : "chevron-down");
 			head.setAttr("aria-expanded", String(!collapsed));
 			head.setAttr("aria-label", collapsed ? "Show notes" : "Hide notes");

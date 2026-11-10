@@ -16,6 +16,7 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 - **Carry-over and move to date.** Review yesterday's unfinished tasks and bring the ones you want into today, or move any task to another date. The old day shows where it went.
 - **Projects with milestones.** A project stays on your day pages until it's finished, with a milestone checklist, a progress bar and its own task cards. A milestone can tick itself when its card is done.
 - **A Scratchpad.** Tasks and ideas that don't belong to a day yet, under the calendar or on their own page. Move them onto a day when you're ready, by dragging onto the calendar or with "Move to date…". A day's Notes box belongs to that day; the Scratchpad belongs to no day.
+- **Habits.** Tick your habits in the box at the bottom right of each day, see how many times you've done each one this week, and add one in a couple of keystrokes, for every day or just for today.
 - **Focus mode.** One day, only your open tasks and the diary, with no sidebars.
 
 ![Week view](docs/week.png)
@@ -39,6 +40,7 @@ Daybook/
 │   └── Website.md              project: status, dates, milestones
 ├── Events/
 │   └── Germany.md              event: start, end, category, repeats
+├── Habits.md                   your habits, one per line (ticks go in each day's "habits" property)
 ├── Recurring.md                recurring tasks, one per line
 └── Scratchpad.md               tasks and notes that belong to no day
 ```

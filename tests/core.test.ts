@@ -699,3 +699,79 @@ test("day -> scratchpad: moves like carry-over and leaves a marker", async () =>
 	const back = S.takeFromScratchpad(pad2, 0, 0);
 	assert.equal(back[0]!.tasks[0]!.carried, undefined);
 });
+
+test("habits: the list note", async () => {
+	const H = await import("../src/core/habit");
+	assert.deepEqual(H.parseHabitLine("- Gym | colour: #5aa469"), { name: "Gym", colour: "#5aa469", archived: false });
+	assert.deepEqual(H.parseHabitLine("- Guitar | archived"), { name: "Guitar", colour: "", archived: true });
+	assert.equal(H.parseHabitLine("- "), null);
+	const list = [H.parseHabitLine("- Gym | colour: #5aa469")!];
+	assert.equal(H.addHabit(list, "  read  a book ", "#3e7bfa")!.name, "read a book");
+	assert.equal(H.addHabit(list, "GYM", "#000")!.colour, "#5aa469"); // existing one, not a duplicate
+	assert.equal(list.length, 2);
+	const note = H.applyHabits("", list);
+	assert.match(note, /## Habits\n\n- Gym \| colour: #5aa469\n- read a book \| colour: #3e7bfa\n$/);
+	assert.deepEqual(H.parseHabits(note).map((h) => h.name), ["Gym", "read a book"]);
+	// Other content in the note is kept
+	assert.match(H.applyHabits("Intro\n\n## Habits\n\n- Old\n\n## Ideas\n\nkeep\n", list), /Intro\n\n## Habits\n\n- Gym[\s\S]*## Ideas\n\nkeep\n$/);
+});
+
+test("habits: a day's ticks and one-day habits", async () => {
+	const H = await import("../src/core/habit");
+	const D = await import("../src/core/day");
+	const habits = [
+		{ name: "Gym", colour: "#0a0", archived: false },
+		{ name: "Guitar", colour: "", archived: true },
+		{ name: "Read", colour: "", archived: false },
+	];
+	const day = D.emptyDay();
+	H.setHabitDone(day, "gym", true);
+	H.addOneDayHabit(day, "Meditate");
+	H.addOneDayHabit(day, "meditate"); // no duplicate
+	H.setHabitDone(day, "meditate", true);
+	const text = D.applyDay("", day);
+	assert.match(text, /^---\ntags: \[\]\nhabits:\n  - gym\n  - meditate\nhabits-extra:\n  - Meditate\n---/);
+	const back = D.parseDay(text);
+	assert.deepEqual(H.dayHabits(habits, back).map((r) => `${r.name}:${r.done}:${r.oneDay}`), ["Gym:true:false", "Read:false:false", "Meditate:true:true"]);
+	// Archived habits still show on a day they were ticked
+	H.setHabitDone(back, "guitar", true);
+	assert.ok(H.dayHabits(habits, back).some((r) => r.name === "Guitar"));
+	// Unticking and removing
+	H.setHabitDone(back, "gym", false);
+	H.removeOneDayHabit(back, "meditate");
+	assert.deepEqual(back.habits, ["guitar"]);
+	assert.deepEqual(back.habitsExtra, []);
+	// Days without habits get no properties
+	assert.doesNotMatch(D.applyDay("", D.emptyDay()), /habits/);
+	// Times this week
+	const ticks = new Map([["2026-11-09", ["gym"]], ["2026-11-11", ["gym", "read"]], ["2026-11-20", ["gym"]]]);
+	assert.equal(H.timesDone(ticks, "gym", ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"]), 2);
+});
+
+test("habits: week table rows", async () => {
+	const H = await import("../src/core/habit");
+	const habits = [
+		{ name: "Gym", colour: "#0a0", archived: false },
+		{ name: "Guitar", colour: "", archived: true },
+		{ name: "Old", colour: "", archived: true },
+	];
+	const days = ["2026-11-09", "2026-11-10", "2026-11-11"];
+	const ticks = new Map([["2026-11-09", ["gym"]], ["2026-11-11", ["gym", "guitar"]]]);
+	const rows = H.habitGrid(habits, ticks, days);
+	assert.deepEqual(rows.map((r) => [r.name, r.done, r.count]), [
+		["Gym", [true, false, true], 2],
+		["Guitar", [false, false, true], 1], // archived, but ticked this week
+	]);
+});
+
+test("habits: how many done per day, for the year view", async () => {
+	const H = await import("../src/core/habit");
+	const ticks = new Map<string, string[]>([
+		["2026-01-01", ["gym", "read"]],
+		["2026-01-02", ["read", "old"]],
+		["2026-01-03", []],
+		["2026-01-04", ["gym", "gym"]],
+	]);
+	const per = H.habitsDonePerDay(ticks, ["gym", "read"]);
+	assert.deepEqual([...per], [["2026-01-01", 2], ["2026-01-02", 1], ["2026-01-04", 1]]);
+});

@@ -42,6 +42,11 @@ export function projectPath(root: string, name: string): string {
 	return join(root, "Projects", `${name}.md`);
 }
 
+/** Your habits, one per line. */
+export function habitsPath(root: string): string {
+	return join(root, "Habits.md");
+}
+
 /** The Scratchpad: tasks and ideas that belong to no day. */
 export function scratchpadPath(root: string): string {
 	return join(root, "Scratchpad.md");

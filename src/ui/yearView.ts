@@ -2,6 +2,8 @@
 // picks which category to highlight. Click a box for the day, a month name
 // for the month. Drag across boxes to add an event (a trip, a conference);
 // event days are underlined and listed below the grid.
+// Habits: pick one to shade the days you did it, or "All habits" to shade
+// each day by how many of your habits you did.
 
 import { Component, debounce, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
@@ -11,9 +13,13 @@ import { boxFill, categoriesFor, countByCategory, yearRows, yearStats } from "..
 import { Category } from "../core/types";
 import { DayEvent, eventDates, eventsOn, orderRange } from "../core/event";
 import { eventColour, newEvent } from "./eventActions";
+import { Habit, HabitGridRow, habitGrid, habitsDonePerDay } from "../core/habit";
 
 /** yearHighlight value for one event, picked in the event list. */
 const EVENT_PREFIX = "event:";
+/** yearHighlight values for habits: one habit, or all of them. */
+const HABIT_PREFIX = "habit:";
+const ALL_HABITS = "habits";
 import { yearDayTags } from "../obsidian/store";
 
 export class YearBoard extends Component {
@@ -23,6 +29,9 @@ export class YearBoard extends Component {
 	private dragFrom: DateKey | null = null;
 	private dragTo: DateKey | null = null;
 	private readonly redrawSoon = debounce(() => this.render(), 400, true);
+	/** Your habit list (read once, and again when Habits.md changes). */
+	private habitList: Habit[] = [];
+	private seenHabits = -1;
 
 	constructor(
 		private plugin: DaybookPlugin,
@@ -48,8 +57,18 @@ export class YearBoard extends Component {
 				if (file.path.startsWith(prefix)) this.redrawSoon();
 			}),
 		);
+		this.register(
+			this.plugin.onChange(() => {
+				if (this.plugin.habitsVersion !== this.seenHabits) void this.loadHabits().then(() => this.render());
+			}),
+		);
+		await this.loadHabits();
 		this.render();
-		return Promise.resolve();
+	}
+
+	private async loadHabits(): Promise<void> {
+		this.seenHabits = this.plugin.habitsVersion;
+		this.habitList = await this.plugin.habits.list();
 	}
 
 	onunload(): void {
@@ -79,12 +98,30 @@ export class YearBoard extends Component {
 		const counts = countByCategory(catTags, categories);
 		this.boxes.clear();
 		const usable = categories.filter((c) => c.tag.trim());
-		// What's highlighted: "all", a category tag, or "event:<name>" (picked in the event list).
+		// Habits: which were done on each day of the year.
+		const yearDays = yearRows(year).flatMap((r) => r.days);
+		const ticks = this.plugin.habits.ticks(yearDays);
+		const habitRows = habitGrid(this.habitList, ticks, yearDays);
+		const perDay = habitsDonePerDay(ticks, habitRows.map((r) => r.key));
+		const habitDone = new Map(habitRows.map((r) => [r.key, new Set(yearDays.filter((_, i) => r.done[i]))]));
+		// What's highlighted: "all", a category tag, "event:<name>" (picked in the event list),
+		// "habits" (all habits) or "habit:<name>".
 		let highlight = this.plugin.yearHighlight;
 		const eventName = highlight.startsWith(EVENT_PREFIX) ? highlight.slice(EVENT_PREFIX.length) : null;
-		const valid = highlight === "all" || (eventName !== null ? events.some((e) => e.name === eventName) : usable.some((c) => c.tag.toLowerCase() === highlight));
+		const habitName = highlight.startsWith(HABIT_PREFIX) ? highlight.slice(HABIT_PREFIX.length) : null;
+		const valid =
+			highlight === "all" ||
+			(highlight === ALL_HABITS
+				? habitRows.length > 0
+				: habitName !== null
+					? habitDone.has(habitName)
+					: eventName !== null
+						? events.some((e) => e.name === eventName)
+						: usable.some((c) => c.tag.toLowerCase() === highlight));
 		if (!valid) highlight = this.plugin.yearHighlight = "all";
 		const pickedEvent = highlight.startsWith(EVENT_PREFIX) ? highlight.slice(EVENT_PREFIX.length) : null;
+		const pickedHabit = highlight.startsWith(HABIT_PREFIX) ? (habitRows.find((r) => HABIT_PREFIX + r.key === highlight) ?? null) : null;
+		const habitMode = pickedHabit !== null || highlight === ALL_HABITS;
 		const pickedEventDays = new Set<DateKey>();
 		if (pickedEvent) {
 			for (const e of events) if (e.name === pickedEvent) for (const d of eventDates(e, `${year}-01-01`, `${year}-12-31`)) pickedEventDays.add(d);
@@ -92,8 +129,8 @@ export class YearBoard extends Component {
 
 		// Legend: pick a category to highlight.
 		const legend = el.createDiv({ cls: "daybook-year-legend", attr: { role: "radiogroup", "aria-label": "Highlight a category" } });
-		const chip = (value: string, label: string, count: number, colour?: string) => {
-			const b = legend.createEl("button", { cls: "daybook-filter-chip", attr: { role: "radio", "aria-checked": String(highlight === value) } });
+		const chip = (value: string, label: string, count: number, colour?: string, into: HTMLElement = legend) => {
+			const b = into.createEl("button", { cls: "daybook-filter-chip", attr: { role: "radio", "aria-checked": String(highlight === value) } });
 			b.toggleClass("is-active", highlight === value);
 			if (colour) b.createSpan({ cls: "daybook-chip-dot is-filled" }).setCssProps({ "--daybook-cat-color": colour });
 			b.createSpan({ text: label });
@@ -119,6 +156,14 @@ export class YearBoard extends Component {
 			const start = today.startsWith(String(year)) ? today : `${year}-01-01`;
 			newEvent(this.plugin, start, start);
 		});
+
+		// Habits: a second row of chips.
+		if (habitRows.length > 0) {
+			const habitLegend = el.createDiv({ cls: "daybook-year-legend daybook-year-habits", attr: { role: "radiogroup", "aria-label": "Highlight a habit" } });
+			habitLegend.createSpan({ cls: "daybook-year-legend-label", text: "Habits" });
+			chip(ALL_HABITS, "All habits", perDay.size, undefined, habitLegend);
+			for (const r of habitRows) chip(HABIT_PREFIX + r.key, r.name, r.count, r.colour || "var(--text-faint)", habitLegend);
+		}
 
 		// Grid: month label + 31 columns.
 		const grid = el.createDiv({ cls: "daybook-year-grid" });
@@ -159,13 +204,26 @@ export class YearBoard extends Component {
 				box.toggleClass("is-today", day === today);
 				box.toggleClass("is-weekend", weekday(day) === 0 || weekday(day) === 6);
 				const inPicked = pickedEventDays.has(day);
-				box.toggleClass("is-dim", highlight !== "all" && shown.length === 0 && !inPicked);
-				const fill = inPicked ? eventColour(this.plugin, events.find((e) => e.name === pickedEvent)!) : boxFill(shown.map((c) => c.color));
+				// One habit: its colour on the days you did it. All habits: darker the more you did.
+				let habitFill: string | null = null;
+				if (pickedHabit) {
+					if (habitDone.get(pickedHabit.key)?.has(day)) habitFill = pickedHabit.colour || "var(--interactive-accent)";
+				} else if (highlight === ALL_HABITS) {
+					const n = perDay.get(day) ?? 0;
+					if (n > 0) habitFill = `color-mix(in srgb, var(--interactive-accent) ${Math.round(30 + (70 * n) / habitRows.length)}%, transparent)`;
+				}
+				box.toggleClass("is-dim", highlight !== "all" && shown.length === 0 && !inPicked && !habitFill);
+				const fill = inPicked
+					? eventColour(this.plugin, events.find((e) => e.name === pickedEvent)!)
+					: habitMode
+						? habitFill
+						: boxFill(shown.map((c) => c.color));
 				if (fill) {
 					box.addClass("has-fill");
 					box.setCssProps({ "--daybook-fill": fill });
 				}
-				const names = [...cats.map((c) => c.name || c.tag), ...dayEvents.map((e) => e.name)].join(", ");
+				const doneHabits = habitMode ? habitRows.filter((r) => habitDone.get(r.key)?.has(day)).map((r) => r.name) : [];
+				const names = [...cats.map((c) => c.name || c.tag), ...dayEvents.map((e) => e.name), ...doneHabits].join(", ");
 				box.setAttr("aria-label", `${formatDate(day, { weekday: "short", day: "numeric", month: "short" }, locale)}${names ? ` · ${names}` : ""}`);
 			}
 			// Keep rows aligned for short months.
@@ -191,6 +249,10 @@ export class YearBoard extends Component {
 			for (const d of eventDates(e, yearFrom, yearTo)) row.days.add(d);
 			loose.set(e.name, row);
 		}
+		if (habitMode) {
+			this.renderHabitNumbers(el, year, yearDays, habitRows, pickedHabit, perDay.size);
+			return;
+		}
 		this.renderNumbers(el, year, highlight, pickedEvent, {
 			categories: usable.map((c) => ({ c, days: counts.get(c.tag.toLowerCase()) ?? 0 })),
 			otherEvents: [...loose.values()]
@@ -206,6 +268,7 @@ export class YearBoard extends Component {
 			colour: pickedEvent
 				? eventColour(this.plugin, events.find((e) => e.name === pickedEvent)!)
 				: (usable.find((c) => c.tag.toLowerCase() === highlight)?.color ?? "var(--interactive-accent)"),
+			habits: habitRows,
 		});
 
 	}
@@ -226,6 +289,7 @@ export class YearBoard extends Component {
 			dates: DateKey[];
 			events: DayEvent[];
 			colour: string;
+			habits: HabitGridRow[];
 		},
 	): void {
 		const wrap = el.createDiv({ cls: "daybook-year-numbers" });
@@ -238,21 +302,7 @@ export class YearBoard extends Component {
 			const others = data.otherEvents;
 			const max = Math.max(1, ...data.categories.map((x) => x.days), ...others.map((x) => x.days));
 			const rows = wrap.createDiv({ cls: "daybook-stat-rows" });
-			const statRow = (label: string, colour: string, days: number, pick: () => void) => {
-				const row = rows.createDiv({ cls: "daybook-stat-row", attr: { role: "button", tabindex: "0", "aria-label": `Show ${label}` } });
-				row.setCssProps({ "--daybook-cat-color": colour, "--daybook-share": `${Math.round((days / max) * 100)}%` });
-				row.createSpan({ cls: "daybook-chip-dot is-filled" });
-				row.createSpan({ cls: "daybook-stat-name", text: label });
-				row.createDiv({ cls: "daybook-stat-bar" }).createDiv({ cls: "daybook-stat-fill" });
-				row.createSpan({ cls: "daybook-stat-value", text: `${days} day${days === 1 ? "" : "s"}` });
-				row.addEventListener("click", pick);
-				row.addEventListener("keydown", (e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault();
-						pick();
-					}
-				});
-			};
+			const statRow = (label: string, colour: string, days: number, pick: () => void) => this.statRow(rows, label, colour, days, max, pick);
 			for (const { c, days } of data.categories) {
 				statRow(c.name || c.tag, c.color, days, () => {
 					this.plugin.yearHighlight = c.tag.toLowerCase();
@@ -286,7 +336,12 @@ export class YearBoard extends Component {
 					}
 				});
 			}
-			wrap.createDiv({ cls: "daybook-year-hint", text: `${data.notes} day${data.notes === 1 ? "" : "s"} with a note. Pick a category or event for more.` });
+			// One line per habit: days done this year.
+			if (data.habits.length > 0) {
+				wrap.createDiv({ cls: "daybook-stat-sub", text: "Habits" });
+				this.habitRowsList(wrap, data.habits);
+			}
+			wrap.createDiv({ cls: "daybook-year-hint", text: `${data.notes} day${data.notes === 1 ? "" : "s"} with a note. Pick a category, event or habit for more.` });
 			return;
 		}
 
@@ -307,15 +362,88 @@ export class YearBoard extends Component {
 				: "longest run (days)",
 		);
 
-		const max = Math.max(1, ...stats.byMonth);
+		this.monthBars(wrap, stats.byMonth, data.colour);
+	}
+
+	/** One clickable line: dot, name, a bar for its share, and "N days". */
+	private statRow(rows: HTMLElement, label: string, colour: string, days: number, max: number, pick: () => void): void {
+		const row = rows.createDiv({ cls: "daybook-stat-row", attr: { role: "button", tabindex: "0", "aria-label": `Show ${label}` } });
+		row.setCssProps({ "--daybook-cat-color": colour, "--daybook-share": `${Math.round((days / max) * 100)}%` });
+		row.createSpan({ cls: "daybook-chip-dot is-filled" });
+		row.createSpan({ cls: "daybook-stat-name", text: label });
+		row.createDiv({ cls: "daybook-stat-bar" }).createDiv({ cls: "daybook-stat-fill" });
+		row.createSpan({ cls: "daybook-stat-value", text: `${days} day${days === 1 ? "" : "s"}` });
+		row.addEventListener("click", pick);
+		row.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				pick();
+			}
+		});
+	}
+
+	/** Days per month as small bars. */
+	private monthBars(wrap: HTMLElement, byMonth: number[], colour: string): void {
+		const locale = moment.locale();
+		const max = Math.max(1, ...byMonth);
 		const bars = wrap.createDiv({ cls: "daybook-month-bars" });
-		bars.setCssProps({ "--daybook-cat-color": data.colour });
-		stats.byMonth.forEach((n, i) => {
+		bars.setCssProps({ "--daybook-cat-color": colour });
+		byMonth.forEach((n, i) => {
 			const col = bars.createDiv({ cls: "daybook-month-bar", attr: { "aria-label": `${monthName(i + 1, locale)}: ${n} day${n === 1 ? "" : "s"}` } });
 			col.createDiv({ cls: "daybook-month-bar-value", text: n ? String(n) : "" });
 			col.createDiv({ cls: "daybook-month-bar-fill" }).setCssProps({ "--daybook-share": `${Math.round((n / max) * 100)}%` });
 			col.createDiv({ cls: "daybook-month-bar-label", text: monthName(i + 1, locale, "short").slice(0, 3) });
 		});
+	}
+
+	/** A line per habit with its days this year; click one to show it. */
+	private habitRowsList(wrap: HTMLElement, habits: HabitGridRow[]): void {
+		const rows = wrap.createDiv({ cls: "daybook-stat-rows" });
+		const max = Math.max(1, ...habits.map((h) => h.count));
+		for (const h of [...habits].sort((a, b) => b.count - a.count)) {
+			this.statRow(rows, h.name, h.colour || "var(--text-faint)", h.count, max, () => {
+				this.plugin.yearHighlight = HABIT_PREFIX + h.key;
+				this.render();
+			});
+		}
+	}
+
+	/**
+	 * "Year in numbers" for habits. All habits: a line per habit. One habit:
+	 * days done, times a week on average, longest run, and days per month.
+	 */
+	private renderHabitNumbers(el: HTMLElement, year: number, yearDays: DateKey[], habits: HabitGridRow[], picked: HabitGridRow | null, anyDays: number): void {
+		const wrap = el.createDiv({ cls: "daybook-year-numbers" });
+		const locale = moment.locale();
+		wrap.createDiv({ cls: "daybook-lane-label", text: `${year} in numbers · ${picked ? picked.name : "All habits"}` });
+		if (!picked) {
+			this.habitRowsList(wrap, habits);
+			wrap.createDiv({ cls: "daybook-year-hint", text: `${anyDays} day${anyDays === 1 ? "" : "s"} with at least one habit done. Pick a habit for more.` });
+			return;
+		}
+		const stats = yearStats(
+			yearDays.filter((_, i) => picked.done[i]),
+			year,
+		);
+		// Average per week so far: this year up to today, a past year in full.
+		const today = todayKey();
+		const elapsed = yearDays.filter((d) => d <= today).length;
+		const perWeek = elapsed > 0 ? (stats.days / elapsed) * 7 : 0;
+		const tiles = wrap.createDiv({ cls: "daybook-stat-tiles" });
+		const tile = (value: string, caption: string) => {
+			const t = tiles.createDiv({ cls: "daybook-stat-tile" });
+			t.createDiv({ cls: "daybook-stat-big", text: value });
+			t.createDiv({ cls: "daybook-stat-caption", text: caption });
+		};
+		tile(String(stats.days), stats.days === 1 ? "day" : "days");
+		tile(perWeek.toFixed(1), "times a week on average");
+		tile(
+			String(stats.longest),
+			stats.longest > 1 && stats.longestFrom
+				? `days in a row (from ${formatDate(stats.longestFrom, { day: "numeric", month: "short" }, locale)})`
+				: "longest run (days)",
+		);
+		this.monthBars(wrap, stats.byMonth, picked.colour || "var(--interactive-accent)");
 	}
 
 	/**
