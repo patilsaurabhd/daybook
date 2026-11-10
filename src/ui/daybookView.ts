@@ -141,6 +141,14 @@ export class DaybookView extends ItemView {
 		this.contentEl.empty();
 	}
 
+	/**
+	 * Obsidian writes the title above the page once, when the tab opens; this
+	 * tab moves between days, weeks and months, so keep it in step with the tab.
+	 */
+	private syncHeaderTitle(): void {
+		this.containerEl.querySelector(".view-header-title")?.setText(this.getDisplayText());
+	}
+
 	/** Moves this view to another date/level, recording it in history. */
 	private navigate(level: ZoomLevel, date: DateKey): void {
 		void this.leaf.setViewState({ type: VIEW_TYPE_DAYBOOK, active: true, state: { level, date } }, { history: true });
@@ -213,6 +221,7 @@ export class DaybookView extends ItemView {
 		el.toggleClass("is-fill", this.level === "day" || this.level === "week");
 		if (this.plugin.focusMode && this.level !== "day") this.plugin.exitFocus();
 		this.renderHeader(el);
+		this.syncHeaderTitle();
 		this.applyFocus();
 		const body = el.createDiv({ cls: "daybook-body" });
 
