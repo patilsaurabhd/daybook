@@ -86,7 +86,7 @@ export class PeriodNote extends Component {
 		const active = activeDocument.activeElement;
 		if (active && this.slots.some((s) => s.el.contains(active))) return;
 		const text = await this.plugin.store.read(path);
-		if (text !== null && this.plugin.store.isOwnWrite(path, text)) return;
+		if (text !== null && this.plugin.store.isOwnWrite(path, text, this)) return;
 		await this.read();
 		for (const slot of this.slots) this.drawSlot(slot);
 	}
@@ -103,7 +103,7 @@ export class PeriodNote extends Component {
 					const current = parsePeriod(old);
 					for (const slot of this.slots) current[slot.field] = snapshot[slot.field];
 					return applyPeriod(old, current);
-				}),
+				}, { writer: this }),
 			)
 			.catch((e: unknown) => {
 				console.error("Daybook: could not save", this.path, e);

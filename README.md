@@ -7,7 +7,7 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 ## Features
 
 - **A calendar and four zoom levels.** A calendar in the right sidebar opens any day, week, month or year. Each has its own page, and you can step forward and back with ‹ Today ›.
-- **A day page for tasks, goals, tags and a diary.** Goals at the top, task cards on the left, the diary on the right, and a notes scratchpad below. Switch between Tasks, Both and Diary, and paste or drop images into the diary.
+- **A day page for tasks, goals, tags and a diary.** Goals at the top, task cards on the left, the diary on the right, and a Notes box below for quick notes about the day. Switch between Tasks, Both and Diary, and paste or drop images into the diary.
 - **Task cards.** Group tasks into cards like "Work" or "Home", nest them with Tab, drag them between cards, and expand one card to fill the page.
 - **Week and month overviews you can edit in place.** Each day is a small card with its first tasks. Click one to add or tick tasks without leaving the overview. Weeks, months and years have their own goals and a reflection box.
 - **A year at a glance.** Every day as a box, coloured by category (Work, Health, Travel or your own), with a legend to highlight one category.
@@ -15,6 +15,7 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 - **Recurring tasks.** "Pay rent, every month on the 1st." They appear on the days they're due, can end on a date, and can be paused or stopped from the task itself. A day that a month doesn't have (the 31st, 29 February) falls on its last day.
 - **Carry-over and move to date.** Review yesterday's unfinished tasks and bring the ones you want into today, or move any task to another date. The old day shows where it went.
 - **Projects with milestones.** A project stays on your day pages until it's finished, with a milestone checklist, a progress bar and its own task cards. A milestone can tick itself when its card is done.
+- **A Scratchpad.** Tasks and ideas that don't belong to a day yet, under the calendar or on their own page. Move them onto a day when you're ready, by dragging onto the calendar or with "Move to date…". A day's Notes box belongs to that day; the Scratchpad belongs to no day.
 - **Focus mode.** One day, only your open tasks and the diary, with no sidebars.
 
 ![Week view](docs/week.png)
@@ -38,7 +39,8 @@ Daybook/
 │   └── Website.md              project: status, dates, milestones
 ├── Events/
 │   └── Germany.md              event: start, end, category, repeats
-└── Recurring.md                recurring tasks, one per line
+├── Recurring.md                recurring tasks, one per line
+└── Scratchpad.md               tasks and notes that belong to no day
 ```
 
 A day note looks like this:

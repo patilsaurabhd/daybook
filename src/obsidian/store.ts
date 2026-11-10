@@ -4,8 +4,12 @@ import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { normaliseTags } from "../core/year";
 
 export class VaultStore {
-	/** Last text Daybook wrote per path, so we can ignore our own modify events. */
-	private lastWritten = new Map<string, string>();
+	/**
+	 * Last text Daybook wrote per path, and which page or panel wrote it, so
+	 * that one can ignore its own save while every other place showing the
+	 * note reloads.
+	 */
+	private lastWritten = new Map<string, { text: string; writer?: object }>();
 
 	constructor(private app: App) {}
 
@@ -25,15 +29,16 @@ export class VaultStore {
 	 * is created on first write. Uses vault.process so the read-modify-write
 	 * is atomic with respect to other edits.
 	 *
-	 * With `{ fromElsewhere: true }` (a command or another view writing to a
-	 * note that may be open), the change isn't treated as the open page's own
-	 * save, so that page reloads and shows it.
+	 * `writer`: the page or panel saving (pass `this`); only it treats the
+	 * change as its own. With `{ fromElsewhere: true }` (a command or another
+	 * view writing to a note that may be open), nobody does, so every open
+	 * page reloads and shows it.
 	 */
-	async write(path: string, update: (oldText: string) => string, opts: { fromElsewhere?: boolean } = {}): Promise<void> {
+	async write(path: string, update: (oldText: string) => string, opts: { fromElsewhere?: boolean; writer?: object } = {}): Promise<void> {
 		const p = normalizePath(path);
 		const remember = (text: string) => {
 			if (opts.fromElsewhere) this.lastWritten.delete(p);
-			else this.lastWritten.set(p, text);
+			else this.lastWritten.set(p, { text, writer: opts.writer });
 		};
 		const existing = this.app.vault.getAbstractFileByPath(p);
 		if (existing instanceof TFile) {
@@ -50,9 +55,15 @@ export class VaultStore {
 		await this.app.vault.create(p, next);
 	}
 
-	/** True if `text` is exactly what Daybook last wrote to `path`. */
-	isOwnWrite(path: string, text: string): boolean {
-		return this.lastWritten.get(normalizePath(path)) === text;
+	/**
+	 * True if `text` is exactly what Daybook last wrote to `path` and, when
+	 * `writer` is given, that writer saved it. A page passes itself, so a save
+	 * from another page or panel showing the same note makes it reload.
+	 */
+	isOwnWrite(path: string, text: string, writer?: object): boolean {
+		const last = this.lastWritten.get(normalizePath(path));
+		if (!last || last.text !== text) return false;
+		return writer === undefined || last.writer === writer;
 	}
 
 	/**

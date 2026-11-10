@@ -42,6 +42,11 @@ export function projectPath(root: string, name: string): string {
 	return join(root, "Projects", `${name}.md`);
 }
 
+/** The Scratchpad: tasks and ideas that belong to no day. */
+export function scratchpadPath(root: string): string {
+	return join(root, "Scratchpad.md");
+}
+
 /** The one note holding all recurring-task rules. */
 export function recurringPath(root: string): string {
 	return join(root, "Recurring.md");

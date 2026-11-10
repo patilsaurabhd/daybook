@@ -140,7 +140,7 @@ export class DayPopover extends Component {
 					current.groups = groups;
 					current.recurring = [...new Set([...current.recurring, ...recurring])];
 					return applyDay(old, current);
-				}),
+				}, { writer: this }), // the day page, if open elsewhere, reloads
 			)
 			.catch((e: unknown) => {
 				console.error("Daybook: could not save", this.path, e);

@@ -9,6 +9,7 @@ import { dayPath } from "../core/paths";
 import { Selection, ZoomLevel } from "../core/types";
 import { eventsOn } from "../core/event";
 import { eventColour } from "./eventActions";
+import { ScratchpadSection } from "./scratchpadSection";
 
 export const VIEW_TYPE_CALENDAR = "daybook-calendar";
 
@@ -37,8 +38,14 @@ export class CalendarView extends ItemView {
 		return "calendar-days";
 	}
 
+	/** The calendar part; redrawn often (selection, notes coming and going). */
+	private calEl!: HTMLElement;
+
 	async onOpen(): Promise<void> {
 		this.contentEl.addClass("daybook-calendar");
+		this.calEl = this.contentEl.createDiv({ cls: "daybook-cal" });
+		// The Scratchpad below it redraws on its own, so typing there isn't interrupted.
+		this.addChild(new ScratchpadSection(this.plugin, this.contentEl.createDiv()));
 
 		this.register(
 			this.plugin.onChange(() => {
@@ -79,7 +86,7 @@ export class CalendarView extends ItemView {
 	}
 
 	private render(): void {
-		const el = this.contentEl;
+		const el = this.calEl;
 		el.empty();
 		const locale = moment.locale();
 		const { firstDayOfWeek, rootFolder } = this.plugin.settings;
@@ -148,7 +155,7 @@ export class CalendarView extends ItemView {
 			for (const day of row.days) {
 				const cell = grid.createDiv({
 					cls: "daybook-cal-day",
-					attr: { role: "button", tabindex: "0", "aria-label": day.key },
+					attr: { role: "button", tabindex: "0", "aria-label": day.key, "data-date": day.key },
 				});
 				cell.createSpan({ cls: "daybook-cal-num", text: String(day.day) });
 				cell.toggleClass("is-other-month", !day.inMonth);

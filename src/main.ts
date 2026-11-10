@@ -1,19 +1,22 @@
-import { Notice, Platform, Plugin, WorkspaceLeaf, debounce } from "obsidian";
-import { todayKey } from "./core/dates";
+import { Notice, Platform, Plugin, WorkspaceLeaf, debounce, moment } from "obsidian";
+import { formatDate, todayKey } from "./core/dates";
 import { DEFAULT_SETTINGS, DaybookSettings, Selection } from "./core/types";
 import { VaultStore } from "./obsidian/store";
 import { ProjectStore } from "./obsidian/projects";
 import { EventStore } from "./obsidian/events";
 import { RecurringStore } from "./obsidian/recurring";
+import { ScratchpadStore } from "./obsidian/scratchpad";
 import { DaybookSettingTab } from "./obsidian/settingsTab";
 import { CalendarView, VIEW_TYPE_CALENDAR } from "./ui/calendarView";
 import { DaybookView, VIEW_TYPE_DAYBOOK } from "./ui/daybookView";
+import { ScratchpadView, VIEW_TYPE_SCRATCHPAD } from "./ui/scratchpadView";
+import { addToScratchpad, takeFromScratchpad } from "./core/scratchpad";
 import { newEvent } from "./ui/eventActions";
 import { RulesModal, openAddRule } from "./ui/recurringModal";
 import { GoToDateModal } from "./ui/goToDateModal";
 import { HelpModal } from "./ui/helpModal";
 import { PromptModal } from "./ui/promptModal";
-import { addCarried, applyDay, newTask, parseDay } from "./core/day";
+import { CarriedCard, addCarried, applyDay, newTask, parseDay, removeTaskBlock } from "./core/day";
 import { dayPath } from "./core/paths";
 import { cleanProjectName } from "./core/project";
 
@@ -23,6 +26,9 @@ export default class DaybookPlugin extends Plugin {
 	projects!: ProjectStore;
 	events!: EventStore;
 	recurring!: RecurringStore;
+	scratchpad!: ScratchpadStore;
+	/** Bumped whenever Scratchpad.md changes, so the sidebar and page can redraw. */
+	scratchpadVersion = 0;
 	/** Tasks added from recurring rules that aren't saved into their day yet. */
 	unsavedRuleTasks = new WeakSet<object>();
 	/** Bumped whenever the recurring rules change, so open days can redraw. */
@@ -53,6 +59,15 @@ export default class DaybookPlugin extends Plugin {
 		this.projects = new ProjectStore(this.app, this.store, () => this.settings.rootFolder);
 		this.events = new EventStore(this.app, this.store, () => this.settings.rootFolder);
 		this.recurring = new RecurringStore(this.store, () => this.settings.rootFolder);
+		this.scratchpad = new ScratchpadStore(this.store, () => this.settings.rootFolder);
+		const padChanged = debounce(() => {
+			this.scratchpadVersion++;
+			this.notify();
+		}, 300, true);
+		const isPad = (path: string) => path === this.scratchpad.path();
+		this.registerEvent(this.app.vault.on("modify", (file) => isPad(file.path) && padChanged()));
+		this.registerEvent(this.app.vault.on("create", (file) => isPad(file.path) && padChanged()));
+		this.registerEvent(this.app.vault.on("delete", (file) => isPad(file.path) && padChanged()));
 		const rulesChanged = debounce(() => {
 			this.recurringVersion++;
 			this.notify();
@@ -75,6 +90,7 @@ export default class DaybookPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_CALENDAR, (leaf) => new CalendarView(leaf, this));
 		this.registerView(VIEW_TYPE_DAYBOOK, (leaf) => new DaybookView(leaf, this));
+		this.registerView(VIEW_TYPE_SCRATCHPAD, (leaf) => new ScratchpadView(leaf, this));
 
 		this.addRibbonIcon("calendar-days", "Open today", () => void this.openToday());
 
@@ -137,6 +153,17 @@ export default class DaybookPlugin extends Plugin {
 			id: "help",
 			name: "How to use",
 			callback: () => new HelpModal(this.app).open(),
+		});
+		this.addCommand({
+			id: "open-scratchpad",
+			name: "Open scratchpad",
+			callback: () => void this.openScratchpad(),
+		});
+		this.addCommand({
+			id: "quick-add-scratchpad",
+			name: "Quick add to scratchpad",
+			callback: () =>
+				new PromptModal(this.app, "Add to the scratchpad", "An idea or a task for some day", "Add", (text) => void this.quickAddToScratchpad(text)).open(),
 		});
 		this.addCommand({
 			id: "show-calendar",
@@ -231,6 +258,71 @@ export default class DaybookPlugin extends Plugin {
 		} catch (e) {
 			console.error("Daybook: could not add the task", e);
 			new Notice("Daybook could not add the task.");
+		}
+	}
+
+	/** Opens the Scratchpad page, reusing an open one. */
+	async openScratchpad(): Promise<void> {
+		const { workspace } = this.app;
+		const leaf = workspace.getLeavesOfType(VIEW_TYPE_SCRATCHPAD)[0] ?? workspace.getLeaf("tab");
+		await leaf.setViewState({ type: VIEW_TYPE_SCRATCHPAD, active: true });
+		await workspace.revealLeaf(leaf);
+		if (Platform.isMobile) workspace.rightSplit.collapse();
+	}
+
+	/**
+	 * Scratchpad -> a day: the task (found by position and text) and all its
+	 * subtasks go into that day's note under the same card, then leave the
+	 * Scratchpad with nothing left behind. The day is written first, so a
+	 * failed write never loses the task.
+	 */
+	async moveFromScratchpad(group: number, index: number, text: string, date: string): Promise<boolean> {
+		try {
+			const pad = await this.scratchpad.read();
+			if (pad.groups[group]?.tasks[index]?.text !== text) {
+				new Notice("That task changed in the meantime. Try again.");
+				return false;
+			}
+			const cards = takeFromScratchpad(structuredClone(pad), group, index);
+			await this.store.write(
+				dayPath(this.settings.rootFolder, date),
+				(old) => {
+					const day = parseDay(old);
+					addCarried(day, cards);
+					return applyDay(old, day);
+				},
+				{ fromElsewhere: true }, // that day may be open
+			);
+			await this.scratchpad.change(
+				(p) => {
+					if (p.groups[group]?.tasks[index]?.text === text) removeTaskBlock(p, group, index);
+				},
+				{ fromElsewhere: true },
+			);
+			new Notice(`Moved to ${formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale())}.`);
+			return true;
+		} catch (e) {
+			console.error("Daybook: could not move the task", e);
+			new Notice("Daybook could not move the task.");
+			return false;
+		}
+	}
+
+	/** Adds tasks taken from a day (already marked there) to the Scratchpad, same cards. */
+	async addToScratchpadCards(cards: CarriedCard[]): Promise<void> {
+		await this.scratchpad.change((pad) => addCarried(pad, cards), { fromElsewhere: true });
+	}
+
+	/** Adds a task to the Scratchpad (the note is created only now). */
+	private async quickAddToScratchpad(text: string): Promise<void> {
+		const task = text.trim();
+		if (!task) return;
+		try {
+			await this.scratchpad.change((pad) => addToScratchpad(pad, task), { fromElsewhere: true });
+			new Notice(`Added to the scratchpad: ${task}`);
+		} catch (e) {
+			console.error("Daybook: could not add to the scratchpad", e);
+			new Notice("Daybook could not add to the scratchpad.");
 		}
 	}
 

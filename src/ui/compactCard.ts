@@ -4,10 +4,10 @@
 
 import { Notice, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
-import { DateKey, formatDate, parseKey, todayKey, weekday } from "../core/dates";
+import { DateKey, formatDate, isDateKey, parseKey, todayKey, weekday } from "../core/dates";
 import { eventsOn } from "../core/event";
 import { renderEventPill } from "./eventActions";
-import { applyDay, parseDay } from "../core/day";
+import { MOVED_TO_SCRATCHPAD, applyDay, parseDay } from "../core/day";
 import { dayPath } from "../core/paths";
 import { SummaryRow, summarizeDay } from "../core/summary";
 
@@ -110,7 +110,7 @@ export class CompactDayCard {
 		item.setCssProps({ "--daybook-depth": String(row.depth) });
 		if (row.carried) {
 			item.addClass("is-carried");
-			const where = row.movedTo ? formatDate(row.movedTo, { day: "numeric", month: "short" }, moment.locale()) : "";
+			const where = movedWhere(row.movedTo);
 			setIcon(item.createSpan({ cls: "daybook-carried-mark", attr: { "aria-label": where ? `Moved to ${where}` : "Moved to a later day" } }), "corner-up-right");
 		} else {
 			const box = item.createEl("input", { type: "checkbox", cls: "task-list-item-checkbox", attr: { "aria-label": row.text } });
@@ -119,7 +119,7 @@ export class CompactDayCard {
 		}
 		item.createSpan({ cls: "daybook-mini-text", text: row.text });
 		if (row.carried && row.movedTo) {
-			item.createSpan({ cls: "daybook-moved-to", text: `→ ${formatDate(row.movedTo, { day: "numeric", month: "short" }, moment.locale())}` });
+			item.createSpan({ cls: "daybook-moved-to", text: `→ ${movedWhere(row.movedTo)}` });
 		}
 	}
 
@@ -132,11 +132,18 @@ export class CompactDayCard {
 				if (!task || task.text !== row.text) return old; // note changed meanwhile
 				task.done = done;
 				return applyDay(old, entry);
-			});
+			}, { writer: this }); // the day page, if open, reloads
 		} catch (e) {
 			console.error("Daybook: could not update task", e);
 			new Notice(`Daybook could not save ${this.path}.`);
 		}
 		await this.refresh();
 	}
+}
+
+/** "13 Nov" or "Scratchpad" for a moved task ("" if unknown). */
+function movedWhere(movedTo: string | undefined): string {
+	if (!movedTo) return "";
+	if (movedTo === MOVED_TO_SCRATCHPAD) return "Scratchpad";
+	return isDateKey(movedTo) ? formatDate(movedTo, { day: "numeric", month: "short" }, moment.locale()) : "";
 }

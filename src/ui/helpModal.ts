@@ -50,6 +50,13 @@ const SECTIONS: { title: string; lines: string[] }[] = [
 		],
 	},
 	{
+		title: "Scratchpad",
+		lines: [
+			"Tasks and ideas that don't belong to a day yet. Add them from the Scratchpad section under the calendar, or the \"Quick add to scratchpad\" command.",
+			"Open the full page with ↗ in that section (or \"Open scratchpad\") for task cards and free-text notes.",
+		],
+	},
+	{
 		title: "Focus mode",
 		lines: ["Focus on a day page (or the \"Focus on today\" command) hides everything but today's open tasks and diary. Press Esc to leave."],
 	},

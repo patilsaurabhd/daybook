@@ -903,7 +903,7 @@
 	padding-right: 0;
 }
 
-/* ---------- Day notes scratchpad ---------- */
+/* ---------- Day page: Notes box ---------- */
 
 .daybook-notes {
 	margin-top: var(--size-4-6);
@@ -2671,4 +2671,359 @@ body:not(.is-phone) .is-fill .daybook-week .daybook-mini {
 	.daybook-event-row-days {
 		display: none;
 	}
+}
+
+/* ---------- Sidebar: Scratchpad section under the calendar ---------- */
+
+.daybook-pad {
+	margin-top: var(--size-4-4);
+	padding-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.daybook-pad-head {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-2-1) 0;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.daybook-pad-head .daybook-pane-title {
+	margin-bottom: 0;
+}
+
+.daybook-pad-head:hover .daybook-pane-title {
+	color: var(--text-muted);
+}
+
+.daybook-pad-head:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+	outline: none;
+}
+
+.daybook-pad-count {
+	margin-left: auto;
+	min-width: 1.4em;
+	padding: 0 var(--size-2-2);
+	border-radius: var(--radius-l);
+	font-size: var(--font-ui-smaller);
+	text-align: center;
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-pad-count:empty {
+	display: none;
+}
+
+.daybook-pad.is-collapsed .daybook-pad-body {
+	display: none;
+}
+
+.daybook-pad-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
+	margin-top: var(--size-2-3);
+}
+
+.daybook-calendar input.daybook-pad-add {
+	width: 100%;
+	font-size: var(--font-ui-small);
+}
+
+.daybook-pad-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	max-height: 45vh;
+	overflow-y: auto;
+}
+
+.daybook-pad-card {
+	margin-top: var(--size-2-3);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	color: var(--text-faint);
+}
+
+.daybook-pad-task {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding-left: calc(var(--daybook-depth, 0) * 14px);
+	border-radius: var(--radius-s);
+}
+
+.daybook-pad-task:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.daybook-pad-task .task-list-item-checkbox {
+	flex: none;
+	margin: 0;
+}
+
+.daybook-calendar input.daybook-pad-text {
+	flex: 1;
+	min-width: 0;
+	height: auto;
+	padding: 2px 0;
+	font-size: var(--font-ui-small);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.daybook-calendar input.daybook-pad-text:focus {
+	box-shadow: none;
+	border-bottom: 1px solid var(--background-modifier-border-focus);
+}
+
+.daybook-pad-delete.clickable-icon {
+	flex: none;
+	padding: 2px;
+	opacity: 0;
+}
+
+.daybook-pad-task:hover .daybook-pad-delete,
+.daybook-pad-delete:focus-visible {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.daybook-pad-delete.clickable-icon {
+		opacity: 0.6;
+	}
+}
+
+.daybook-pad-delete svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-pad-task.is-done .daybook-pad-text,
+.daybook-pad-task.is-removing {
+	opacity: 0.4;
+	text-decoration: line-through;
+}
+
+.daybook-pad-empty {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+/* ---------- Scratchpad: sidebar open button and the full page ---------- */
+
+.daybook-pad-open.clickable-icon {
+	flex: none;
+	padding: 2px;
+}
+
+.daybook-pad-open svg {
+	width: 13px;
+	height: 13px;
+}
+
+.daybook-pad-count + .daybook-pad-open,
+.daybook-pad-count:empty + .daybook-pad-open {
+	margin-left: var(--size-2-2);
+}
+
+.daybook-pad-head .daybook-pane-title + .daybook-pad-count:empty + .daybook-pad-open {
+	margin-left: auto;
+}
+
+.daybook-scratchpad-view .daybook-subtitle {
+	color: var(--text-faint);
+}
+
+.daybook-scratchpad-view .daybook-pane-diary .daybook-mdbox textarea.daybook-mdbox-input {
+	min-height: 16em;
+}
+
+/* Scratchpad page: the main card is big (about 80% of the tasks half, full
+   height); other cards sit in a narrow column beside it. Narrow panes stack. */
+@container (min-width: 561px) {
+	.daybook-scratchpad-view .daybook-general-main {
+		flex: 0 0 80%;
+	}
+
+	.daybook-scratchpad-view .daybook-general-others {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.daybook-scratchpad-view .daybook-general-main > .daybook-card {
+	min-height: 320px;
+}
+
+/* Sidebar Scratchpad: a card heading folds its tasks away */
+.daybook-pad-card {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	padding: 1px 0;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.daybook-pad-card:hover,
+.daybook-pad-card:focus-visible {
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+	outline: none;
+}
+
+.daybook-pad-card-chevron {
+	display: inline-flex;
+}
+
+.daybook-pad-card-chevron svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-pad-card-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.daybook-pad-card-count {
+	font-weight: normal;
+	color: var(--text-faint);
+}
+
+/* A day in the sidebar calendar while a Scratchpad task is dragged over it */
+.daybook-cal-day.is-drop-target {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+/* Sidebar Scratchpad: grip to drag a task onto a calendar day */
+.daybook-pad-grip {
+	width: 12px;
+}
+
+.daybook-pad-grip svg {
+	width: 12px;
+	height: 12px;
+}
+
+.daybook-pad-task:hover .daybook-pad-grip,
+.daybook-pad-task:focus-within .daybook-pad-grip {
+	opacity: 1;
+}
+
+.daybook-pad-task.is-dragging {
+	opacity: 0.4;
+}
+
+/* ---------- Sidebar Scratchpad: compact task cards ---------- */
+
+/* Its own width decides the layout (cards stack in the narrow sidebar). */
+.daybook-pad-board {
+	container-type: inline-size;
+}
+
+/* No Tasks heading, chips, + Card tile or expand buttons in the sidebar. */
+.daybook-pad-board .daybook-pane-head,
+.daybook-pad-board .daybook-chips,
+.daybook-pad-board .daybook-add-tile,
+.daybook-pad-board .daybook-card-focus {
+	display: none;
+}
+
+/* Only what's still to do: ticked or moved tasks drop out of the list. */
+.daybook-pad-board .daybook-task.is-done,
+.daybook-pad-board .daybook-task.is-carried {
+	display: none;
+}
+
+.daybook-pad-board .daybook-board,
+.daybook-pad-board .daybook-lane.daybook-lane-general,
+.daybook-pad-board .daybook-cards {
+	gap: var(--size-2-2);
+}
+
+.daybook-pad-board .daybook-card {
+	padding: 0;
+	border: none;
+	background: transparent;
+	min-height: 0;
+}
+
+.daybook-pad-board .daybook-general-main > .daybook-card {
+	min-height: 0;
+}
+
+.daybook-pad-board .daybook-card.is-loose:not(.is-focused) {
+	padding-right: 0;
+}
+
+.daybook-pad-board .daybook-task {
+	gap: var(--size-2-2);
+	padding: 1px 0;
+	padding-left: calc(var(--daybook-depth, 0) * 14px);
+	font-size: var(--font-ui-small);
+}
+
+.daybook-pad-board input.daybook-card-title {
+	font-size: var(--font-ui-small);
+}
+
+.daybook-pad-list {
+	max-height: 45vh;
+	overflow-y: auto;
+}
+
+/* The quick-add box above already adds tasks; Enter on a task adds the next one. */
+.daybook-pad-board .daybook-task-new {
+	display: none;
+}
+
+/* Sidebar Scratchpad: plain text rows (no input boxes) and bold card headings,
+   as in the main view. */
+.daybook-pad-board input.daybook-task-text,
+.daybook-pad-board input.daybook-card-title {
+	flex: 1;
+	min-width: 0;
+	height: auto;
+	padding: 2px 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.daybook-pad-board input.daybook-task-text {
+	font-size: var(--font-ui-small);
+}
+
+.daybook-pad-board input.daybook-task-text:focus,
+.daybook-pad-board input.daybook-card-title:focus {
+	box-shadow: none;
+	border-bottom: 1px solid var(--background-modifier-border-focus);
+}
+
+.daybook-pad-board .daybook-card-header {
+	margin: var(--size-2-3) 0 0;
+	gap: 2px;
+}
+
+.daybook-pad-board input.daybook-card-title {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	color: var(--text-muted);
+}
+
+.daybook-pad-board .daybook-card-toggle.clickable-icon svg,
+.daybook-pad-board .daybook-card-menu.clickable-icon svg {
+	width: 12px;
+	height: 12px;
 }

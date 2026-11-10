@@ -5,7 +5,18 @@
 import { Component, Menu, Notice, debounce, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
 import { DateKey, formatDate, todayKey } from "../core/dates";
-import { CarriedCard, DayEntry, addCarried, applyDay, emptyDay, listOpenTasks, openTasks, parseDay, takeOpenTasks } from "../core/day";
+import {
+	CarriedCard,
+	DayEntry,
+	MOVED_TO_SCRATCHPAD,
+	addCarried,
+	applyDay,
+	emptyDay,
+	listOpenTasks,
+	openTasks,
+	parseDay,
+	takeOpenTasks,
+} from "../core/day";
 import { CarryModal } from "./carryModal";
 import { addRuleTasks, pendingRules } from "../core/recurring";
 import { CategoryModal, addCategory, tagFromName } from "./categoryModal";
@@ -129,7 +140,47 @@ export class DayCard extends Component {
 			return;
 		}
 		const from = formatDate(src.key, { weekday: "short", day: "numeric", month: "short" }, moment.locale());
-		new CarryModal(this.plugin.app, from, cards, (picked) => void this.carryOver(picked)).open();
+		new CarryModal(
+			this.plugin.app,
+			from,
+			cards,
+			(picked) => void this.carryOver(picked),
+			(picked) => void this.sendCarryToScratchpad(picked),
+		).open();
+	}
+
+	/**
+	 * From the carry-over review: the picked unfinished tasks go to the
+	 * Scratchpad instead of today. The old day marks them "[>] … (moved to
+	 * Scratchpad)". The Scratchpad is written first; the bar then shows
+	 * whatever is still left on the old day.
+	 */
+	private async sendCarryToScratchpad(only: Map<string, string>): Promise<void> {
+		const src = this.carrySource;
+		if (!src) return;
+		try {
+			const text = await this.plugin.store.read(src.path);
+			if (text === null) return;
+			const cards = takeOpenTasks(parseDay(text), only, MOVED_TO_SCRATCHPAD); // a preview copy
+			if (cards.length === 0) return;
+			await this.plugin.addToScratchpadCards(cards);
+			await this.plugin.store.write(
+				src.path,
+				(old) => {
+					const e = parseDay(old);
+					takeOpenTasks(e, only, MOVED_TO_SCRATCHPAD);
+					return applyDay(old, e);
+				},
+				{ fromElsewhere: true },
+			);
+			const n = cards.reduce((k, c) => k + c.tasks.length, 0);
+			new Notice(`Sent ${n} task${n === 1 ? "" : "s"} to the scratchpad.`);
+		} catch (e) {
+			console.error("Daybook: could not send tasks to the scratchpad", e);
+			new Notice("Daybook could not send the tasks to the scratchpad.");
+		}
+		await this.findCarrySource();
+		this.render();
 	}
 
 	/**
@@ -266,7 +317,7 @@ export class DayCard extends Component {
 		this.dirty = false;
 		const snapshot = structuredClone(this.entry);
 		this.saving = this.saving
-			.then(() => this.plugin.store.write(this.path, (old) => applyDay(old, snapshot)))
+			.then(() => this.plugin.store.write(this.path, (old) => applyDay(old, snapshot), { writer: this }))
 			.then(() => this.markRuleTasksSaved())
 			.catch((e: unknown) => {
 				console.error("Daybook: could not save", this.path, e);
@@ -350,7 +401,7 @@ export class DayCard extends Component {
 		this.renderNotes(el.createDiv({ cls: "daybook-notes" }));
 	}
 
-	/** Scratchpad strip along the bottom; collapsible (remembered). */
+	/** The Notes box along the bottom; collapsible (remembered). */
 	private renderNotes(strip: HTMLElement): void {
 		const head = strip.createDiv({
 			cls: "daybook-notes-head",
@@ -385,7 +436,7 @@ export class DayCard extends Component {
 
 		this.addBox(body, {
 			value: this.entry.notes,
-			placeholder: "Scratchpad: numbers, links, ideas…",
+			placeholder: "Notes for the day: numbers, links, ideas…",
 			label: "Notes",
 			minRows: 3,
 			onChange: (v) => {

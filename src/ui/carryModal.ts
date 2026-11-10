@@ -12,12 +12,15 @@ export class CarryModal extends Modal {
 	private boxes = new Map<string, HTMLInputElement>();
 	private cardBoxes: { box: HTMLInputElement; keys: string[] }[] = [];
 	private goBtn!: HTMLButtonElement;
+	private padBtn: HTMLButtonElement | null = null;
 
 	constructor(
 		app: App,
 		private fromLabel: string,
 		private cards: OpenCard[],
 		private onConfirm: (selected: Map<string, string>) => void,
+		/** "Send to scratchpad": the ticked tasks go there instead of today. */
+		private onSendToScratchpad?: (selected: Map<string, string>) => void,
 	) {
 		super(app);
 		for (const c of cards) for (const t of c.tasks) this.selected.set(t.key, t.text);
@@ -69,6 +72,16 @@ export class CarryModal extends Modal {
 		const footer = contentEl.createDiv({ cls: "daybook-carry-footer" });
 		const cancel = footer.createEl("button", { text: "Cancel" });
 		cancel.addEventListener("click", () => this.close());
+		if (this.onSendToScratchpad) {
+			const send = this.onSendToScratchpad;
+			this.padBtn = footer.createEl("button", { attr: { "aria-label": "Put the ticked tasks on the scratchpad instead of today" } });
+			this.padBtn.addEventListener("click", () => {
+				if (this.selected.size === 0) return;
+				const picked = new Map(this.selected);
+				this.close();
+				send(picked);
+			});
+		}
 		this.goBtn = footer.createEl("button", { cls: "mod-cta" });
 		this.goBtn.addEventListener("click", () => {
 			if (this.selected.size === 0) return;
@@ -103,6 +116,10 @@ export class CarryModal extends Modal {
 		const n = this.selected.size;
 		this.goBtn.setText(n === 0 ? "Nothing selected" : `Carry over ${n} task${n === 1 ? "" : "s"}`);
 		this.goBtn.disabled = n === 0;
+		if (this.padBtn) {
+			this.padBtn.setText("Send to scratchpad");
+			this.padBtn.disabled = n === 0;
+		}
 	}
 }
 

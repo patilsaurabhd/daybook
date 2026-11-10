@@ -166,7 +166,7 @@ export class DaybookView extends ItemView {
 		if (!card || file.path !== card.path) return;
 		if (file instanceof TFile) {
 			const text = await this.plugin.store.read(file.path);
-			if (text !== null && this.plugin.store.isOwnWrite(file.path, text)) return;
+			if (text !== null && this.plugin.store.isOwnWrite(file.path, text, card)) return;
 		}
 		await card.reloadFromDisk();
 	}

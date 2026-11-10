@@ -23,7 +23,7 @@
 //
 //   Free text...
 //
-//   ## Notes          (scratchpad; only added once something is written)
+//   ## Notes          (quick notes for the day; only added once something is written)
 //
 //   Quick notes...
 
@@ -56,7 +56,10 @@ export interface Task {
 	id?: string;
 	/** Moved to a later day ("- [>] task"); not counted as open or done. */
 	carried?: boolean;
-	/** Where a moved task went: written as "(moved to [[2026-11-13]])". */
+	/**
+	 * Where a moved task went: a date, written "(moved to [[2026-11-13]])",
+	 * or MOVED_TO_SCRATCHPAD, written "(moved to Scratchpad)".
+	 */
 	movedTo?: string;
 }
 
@@ -77,11 +80,14 @@ export interface DayEntry {
 	/** Always at least one group; groups[0] is the ungrouped one. */
 	groups: TaskGroup[];
 	diary: string;
-	/** Scratchpad for quick capture during the day. */
+	/** Quick notes for the day (the Notes box). */
 	notes: string;
 	/** Recurring rules already added to this day (property "recurring"), so they're never added twice. */
 	recurring: string[];
 }
+
+/** Anything with task cards: a day note, or the Scratchpad. */
+export type TaskList = Pick<DayEntry, "groups">;
 
 export function emptyGroup(name: string | null): TaskGroup {
 	return { name, tasks: [], preamble: [], indent: "\t" };
@@ -95,8 +101,11 @@ export function newTask(text: string, depth = 0): Task {
 	return { done: false, text, depth, children: [] };
 }
 
-/** "(moved to [[2026-11-13]])" at the end of a moved task. */
-const MOVED_RE = /\s*\(moved to \[\[(\d{4}-\d{2}-\d{2})(?:\|[^\]]*)?\]\]\)$/;
+/** movedTo value for a task sent to the Scratchpad. */
+export const MOVED_TO_SCRATCHPAD = "scratchpad";
+
+/** "(moved to [[2026-11-13]])" or "(moved to Scratchpad)" at the end of a moved task. */
+const MOVED_RE = /\s*\(moved to (?:\[\[(\d{4}-\d{2}-\d{2})(?:\|[^\]]*)?\]\]|(Scratchpad))\)$/;
 
 const TASK_RE = /^([ \t]*)[-*+] \[([ xX>])\](?: (.*))?$/;
 
@@ -138,7 +147,7 @@ export function parseTasks(section: string): { tasks: Task[]; preamble: string[]
 			const mark = m[2]!;
 			const task: Task = { done: mark === "x" || mark === "X", text, depth, children: [] };
 			if (mark === ">") task.carried = true;
-			if (movedMatch) task.movedTo = movedMatch[1]!;
+			if (movedMatch) task.movedTo = movedMatch[1] ?? MOVED_TO_SCRATCHPAD;
 			if (idMatch) task.id = idMatch[1]!;
 			tasks.push(task);
 		} else if (tasks.length > 0) {
@@ -160,7 +169,7 @@ export function serializeTasks(tasks: Task[], preamble: string[] = [], indent = 
 		const text = t.text.replace(/\s*\n\s*/g, " ").trim();
 		if (text === "" && t.children.length === 0) continue; // drop empty rows
 		const id = t.id ? ` ^${t.id}` : "";
-		const moved = t.carried && t.movedTo ? ` (moved to [[${t.movedTo}]])` : "";
+		const moved = !t.carried || !t.movedTo ? "" : t.movedTo === MOVED_TO_SCRATCHPAD ? " (moved to Scratchpad)" : ` (moved to [[${t.movedTo}]])`;
 		const mark = t.carried ? ">" : t.done ? "x" : " ";
 		lines.push(`${indent.repeat(t.depth)}- [${mark}] ${text}${moved}${id}`.trimEnd());
 		lines.push(...t.children);
@@ -258,7 +267,7 @@ export function removeGroup(groups: TaskGroup[], index: number): void {
 	groups[0]!.preamble.push(...g!.preamble);
 }
 
-export function allTasks(entry: DayEntry): Task[] {
+export function allTasks(entry: TaskList): Task[] {
 	return entry.groups.flatMap((g) => g.tasks);
 }
 
@@ -310,7 +319,7 @@ export function isOpen(t: Task): boolean {
 	return !t.done && !t.carried && t.text.trim() !== "";
 }
 
-export function openTasks(entry: DayEntry): Task[] {
+export function openTasks(entry: TaskList): Task[] {
 	return allTasks(entry).filter(isOpen);
 }
 
@@ -334,7 +343,7 @@ export interface OpenCard {
 	tasks: { key: string; text: string; depth: number }[];
 }
 
-export function listOpenTasks(entry: DayEntry): OpenCard[] {
+export function listOpenTasks(entry: TaskList): OpenCard[] {
 	const out: OpenCard[] = [];
 	entry.groups.forEach((group, gi) => {
 		const tasks = group.tasks.flatMap((t, ti) => (isOpen(t) ? [{ key: taskKey(gi, ti), text: t.text, depth: t.depth }] : []));
@@ -348,7 +357,7 @@ export function listOpenTasks(entry: DayEntry): OpenCard[] {
  * "carried" ([>]) in `entry`. With `only`, just those tasks (by taskKey, and
  * only if their text still matches) are taken; the rest stay open.
  */
-export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>, movedTo?: string): CarriedCard[] {
+export function takeOpenTasks(entry: TaskList, only?: Map<string, string>, movedTo?: string): CarriedCard[] {
 	const out: CarriedCard[] = [];
 	for (const [gi, group] of entry.groups.entries()) {
 		const moved: Task[] = [];
@@ -372,10 +381,29 @@ export function takeOpenTasks(entry: DayEntry, only?: Map<string, string>, moved
 }
 
 /**
+ * Takes a task and all its subtasks (done or not) out of a list entirely,
+ * with no [>] left behind. Used when a task leaves the Scratchpad.
+ */
+export function removeTaskBlock(list: TaskList, group: number, index: number): CarriedCard[] {
+	const g = list.groups[group];
+	const task = g?.tasks[index];
+	if (!g || !task) return [];
+	const block = g.tasks.splice(index, blockEnd(g.tasks, index) - index);
+	const shift = block[0]!.depth;
+	return [
+		{
+			name: g.name,
+			// Leaving keeps done/undone and block ids, but not any old "moved" mark.
+			tasks: block.map(({ carried: _c, movedTo: _m, ...t }) => ({ ...t, depth: t.depth - shift, children: [...t.children] })),
+		},
+	];
+}
+
+/**
  * "Move to date": takes one task and its unfinished subtasks out of a day
  * (marked [>], like carry-over), ready to add to another day's same card.
  */
-export function takeTaskBlock(entry: DayEntry, group: number, index: number, movedTo?: string): CarriedCard[] {
+export function takeTaskBlock(entry: TaskList, group: number, index: number, movedTo?: string): CarriedCard[] {
 	const tasks = entry.groups[group]?.tasks;
 	const task = tasks?.[index];
 	if (!tasks || !task || !isOpen(task)) return [];
@@ -389,7 +417,7 @@ export function takeTaskBlock(entry: DayEntry, group: number, index: number, mov
  * needed. A task that's already open in the day (same text, e.g. today's
  * recurring "Stretch") isn't added a second time.
  */
-export function addCarried(entry: DayEntry, cards: CarriedCard[]): number {
+export function addCarried(entry: TaskList, cards: CarriedCard[]): number {
 	let count = 0;
 	const open = new Set(allTasks(entry).filter(isOpen).map((t) => t.text.trim().toLowerCase()));
 	for (const card of cards) {

@@ -249,7 +249,7 @@ test("week/month/year note", async () => {
 	assert.equal(applyPeriod(existing, e), "---\nmood: ok\n---\n\nIntro\n\n## Goals\n\nRun\n\n## Reflection\n\nGood week\n");
 });
 
-test("day notes scratchpad", () => {
+test("day Notes box", () => {
 	const plain = applyDay("", { ...emptyDay(), diary: "d" });
 	assert.doesNotMatch(plain, /## Notes/); // not added until used
 	const withNotes = applyDay(plain, { ...parseDay(plain), notes: "call Sam 555-0101" });
@@ -637,4 +637,65 @@ test("recurring tasks: end dates and project/milestone cards", async () => {
 	// A named project card keeps its title; plain cards are unchanged
 	assert.equal(R.ruleCard("[[Website]] Design"), "[[Website]] Design");
 	assert.equal(R.ruleCard("Home"), "Home");
+});
+
+test("scratchpad note: read and write", async () => {
+	const S = await import("../src/core/scratchpad");
+	const pad = S.emptyScratchpad();
+	S.addToScratchpad(pad, "Look into a new bank");
+	pad.notes = "Ideas for the trip";
+	const text = S.applyScratchpad("", pad);
+	assert.equal(text, "## Tasks\n\n- [ ] Look into a new bank\n\n## Notes\n\nIdeas for the trip\n");
+	const back = S.parseScratchpad(text);
+	assert.deepEqual(back.groups[0]!.tasks.map((t) => t.text), ["Look into a new bank"]);
+	assert.equal(back.notes, "Ideas for the trip");
+	// Cards, nesting and anything else in the note survive
+	const hand = "---\ncssclasses: wide\n---\n\nMy intro\n\n## Tasks\n\n### Home\n\n- [ ] shelf\n\t- [ ] screws\n\n## Notes\n\nidea\n\n## Links\n\n- [[x]]\n";
+	const p = S.parseScratchpad(hand);
+	assert.deepEqual(p.groups.map((g) => [g.name, g.tasks.map((t) => [t.text, t.depth])]), [[null, []], ["Home", [["shelf", 0], ["screws", 1]]]]);
+	assert.equal(S.applyScratchpad(hand, p), hand); // unchanged when nothing changed
+	assert.equal(S.scratchpadOpenCount(p), 2);
+});
+
+test("scratchpad -> day: the task and all its subtasks move, nothing left behind", async () => {
+	const S = await import("../src/core/scratchpad");
+	const D = await import("../src/core/day");
+	const pad = S.parseScratchpad("## Tasks\n\n- [ ] keep\n\n### Home\n\n- [ ] shelf ^s1\n\t- [x] measure\n\t- [ ] screws\n\t\t- [ ] size 4\n- [ ] paint\n");
+	const cards = S.takeFromScratchpad(pad, 1, 0);
+	assert.deepEqual(cards.map((c) => [c.name, c.tasks.map((t) => [t.text, t.depth, t.done])]), [
+		["Home", [["shelf", 0, false], ["measure", 1, true], ["screws", 1, false], ["size 4", 2, false]]],
+	]);
+	// Gone from the Scratchpad, no [>] marker
+	assert.equal(S.applyScratchpad("", pad), "## Tasks\n\n- [ ] keep\n\n### Home\n\n- [ ] paint\n\n## Notes\n");
+	// Into the day's card with the same name (created if needed)
+	const day = D.parseDay("## Tasks\n\n- [ ] today\n");
+	D.addCarried(day, cards);
+	assert.match(D.applyDay("", day), /### Home\n\n- \[ \] shelf \^s1\n\t- \[x\] measure\n\t- \[ \] screws\n\t\t- \[ \] size 4\n/);
+	// A nested task moves with its own subtasks, becoming top level
+	const pad2 = S.parseScratchpad("## Tasks\n\n- [ ] a\n\t- [ ] b\n\t\t- [ ] c\n");
+	assert.deepEqual(S.takeFromScratchpad(pad2, 0, 1)[0]!.tasks.map((t) => [t.text, t.depth]), [["b", 0], ["c", 1]]);
+	assert.deepEqual(pad2.groups[0]!.tasks.map((t) => t.text), ["a"]);
+});
+
+test("day -> scratchpad: moves like carry-over and leaves a marker", async () => {
+	const S = await import("../src/core/scratchpad");
+	const D = await import("../src/core/day");
+	const day = D.parseDay("## Tasks\n\n### Work\n\n- [ ] report\n\t- [x] outline\n\t- [ ] draft\n- [ ] email\n");
+	const pad = S.emptyScratchpad();
+	assert.equal(S.sendTaskToScratchpad(day, 1, 0, pad), 2);
+	assert.deepEqual(pad.groups.map((g) => [g.name, g.tasks.map((t) => [t.text, t.depth])]), [[null, []], ["Work", [["report", 0], ["draft", 1]]]]);
+	const text = D.applyDay("", day);
+	assert.match(text, /- \[>\] report \(moved to Scratchpad\)\n\t- \[x\] outline\n\t- \[>\] draft \(moved to Scratchpad\)\n- \[ \] email/);
+	// The marker reads back
+	assert.equal(D.parseDay(text).groups[1]!.tasks[0]!.movedTo, D.MOVED_TO_SCRATCHPAD);
+	assert.equal(D.applyDay(text, D.parseDay(text)), text);
+	// Carry-over review: send picked tasks to the Scratchpad instead of today
+	const y = D.parseDay("## Tasks\n\n- [ ] a\n- [ ] b\n");
+	const pad2 = S.emptyScratchpad();
+	assert.equal(S.sendOpenTasksToScratchpad(y, new Map([["0:1", "b"]]), pad2), 1);
+	assert.deepEqual(pad2.groups[0]!.tasks.map((t) => t.text), ["b"]);
+	assert.deepEqual(D.openTasks(y).map((t) => t.text), ["a"]);
+	// Moving back to a day removes it from the Scratchpad and clears any old mark
+	const back = S.takeFromScratchpad(pad2, 0, 0);
+	assert.equal(back[0]!.tasks[0]!.carried, undefined);
 });

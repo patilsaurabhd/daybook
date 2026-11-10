@@ -15,8 +15,9 @@ import { Component, Keymap, Menu, Notice, moment, setIcon } from "obsidian";
 import { MoveModal } from "./moveModal";
 import { dayPath } from "../core/paths";
 import type DaybookPlugin from "../main";
-import { DateKey, formatDate, todayKey } from "../core/dates";
+import { DateKey, formatDate, isDateKey, todayKey } from "../core/dates";
 import {
+	MOVED_TO_SCRATCHPAD,
 	Task,
 	TaskGroup,
 	TaskPos,
@@ -68,6 +69,8 @@ interface DragState {
 	line: HTMLElement;
 	target: TaskPos | null;
 	targetCard: HTMLElement | null;
+	/** Scratchpad page: a day in the sidebar calendar the task is over. */
+	dateCell: HTMLElement | null;
 }
 
 export class TaskBoard extends Component {
@@ -76,6 +79,28 @@ export class TaskBoard extends Component {
 	private order: HTMLInputElement[] = [];
 	private inputs = new Map<string, HTMLInputElement>();
 	private drag: DragState | null = null;
+	/** Folded cards (lower-case names): the Scratchpad keeps its own list, apart from day pages. */
+	private get foldedCards(): string[] {
+		return this.mode.scratchpad ? this.plugin.settings.scratchpadClosedCards : this.plugin.settings.collapsedCards;
+	}
+
+	private set foldedCards(list: string[]) {
+		if (this.mode.scratchpad) this.plugin.settings.scratchpadClosedCards = list;
+		else this.plugin.settings.collapsedCards = list;
+	}
+
+	/** The Scratchpad page remembers its expanded card separately from day pages. */
+	private padFocus: string | null = null;
+
+	/** Which card is expanded (lower-case name, or the main card's key). */
+	private get focusedCard(): string | null {
+		return this.mode.scratchpad ? this.padFocus : this.plugin.focusedCard;
+	}
+
+	private set focusedCard(key: string | null) {
+		if (this.mode.scratchpad) this.padFocus = key;
+		else this.plugin.focusedCard = key;
+	}
 	private chipsEl!: HTMLElement;
 	private panels: ProjectPanel[] = [];
 
@@ -85,6 +110,11 @@ export class TaskBoard extends Component {
 		private groups: TaskGroup[],
 		private onChange: () => void,
 		private projectCtx?: ProjectContext,
+		/**
+		 * `scratchpad`: tasks on the Scratchpad page (no day, no recurring
+		 * rules); `moveOut` takes a task from there into a day.
+		 */
+		private mode: { scratchpad?: boolean; moveOut?: (group: number, index: number, text: string, date: DateKey) => Promise<void> } = {},
 	) {
 		super();
 	}
@@ -93,7 +123,7 @@ export class TaskBoard extends Component {
 		const head = this.containerEl.createDiv({ cls: "daybook-pane-head" });
 		head.createDiv({ cls: "daybook-pane-title", text: "Tasks" });
 		const buttons = head.createDiv({ cls: "daybook-pane-actions" });
-		if (!this.projectCtx?.compact) {
+		if (!this.projectCtx?.compact && !this.mode.scratchpad) {
 			const rec = buttons.createEl("button", { cls: "daybook-add-card clickable-icon", attr: { "aria-label": "Recurring tasks" } });
 			setIcon(rec, "repeat");
 			this.registerDomEvent(rec, "click", () => new RulesModal(this.plugin).open());
@@ -132,14 +162,14 @@ export class TaskBoard extends Component {
 	// ---- Collapsed state (stored in plugin data, by card name) ----
 
 	private isCollapsed(g: TaskGroup): boolean {
-		return g.name !== null && g.name !== "" && this.plugin.settings.collapsedCards.includes(g.name.toLowerCase());
+		return g.name !== null && g.name !== "" && this.foldedCards.includes(g.name.toLowerCase());
 	}
 
 	private setCollapsed(name: string, collapsed: boolean): void {
 		const key = name.toLowerCase();
-		const list = this.plugin.settings.collapsedCards.filter((n) => n !== key);
+		const list = this.foldedCards.filter((n) => n !== key);
 		if (collapsed && key) list.push(key);
-		this.plugin.settings.collapsedCards = list;
+		this.foldedCards = list;
 		void this.plugin.saveSettings(false);
 	}
 
@@ -378,7 +408,7 @@ export class TaskBoard extends Component {
 
 	private setProjectFocus(project: Project | null): void {
 		this.plugin.focusedProject = project ? project.name.toLowerCase() : null;
-		this.plugin.focusedCard = null;
+		this.focusedCard = null;
 		this.render();
 	}
 
@@ -508,7 +538,7 @@ export class TaskBoard extends Component {
 	}
 
 	private focusedIndex(): number {
-		const key = this.plugin.focusedCard;
+		const key = this.focusedCard;
 		if (!key) return -1;
 		if (key === LOOSE_KEY) return this.groups.length ? 0 : -1;
 		return this.groups.findIndex((g) => g.name !== null && g.name.trim().toLowerCase() === key);
@@ -516,7 +546,7 @@ export class TaskBoard extends Component {
 
 	/** Expands a card (or, with null, shows all cards again). */
 	private setFocus(group: TaskGroup | null): void {
-		this.plugin.focusedCard = group ? focusKey(group) : null;
+		this.focusedCard = group ? focusKey(group) : null;
 		this.render();
 	}
 
@@ -671,11 +701,11 @@ export class TaskBoard extends Component {
 			});
 			title.addEventListener("change", () => {
 				// Keep the collapsed state when a collapsed card is renamed.
-				if (nameBefore && this.plugin.settings.collapsedCards.includes(nameBefore.toLowerCase())) {
+				if (nameBefore && this.foldedCards.includes(nameBefore.toLowerCase())) {
 					this.setCollapsed(nameBefore, false);
 					if (title.value.trim()) this.setCollapsed(title.value.trim(), true);
 				}
-				if (focused) this.plugin.focusedCard = title.value.trim().toLowerCase() || null;
+				if (focused) this.focusedCard = title.value.trim().toLowerCase() || null;
 				nameBefore = title.value;
 			});
 			title.addEventListener("keydown", (evt) => {
@@ -702,7 +732,7 @@ export class TaskBoard extends Component {
 					.setIcon("trash")
 					.onClick(() => {
 						if (group.name) this.setCollapsed(group.name, false);
-						if (focused) this.plugin.focusedCard = null;
+						if (focused) this.focusedCard = null;
 						removeGroup(this.groups, gi);
 						this.onChange();
 						this.render();
@@ -764,13 +794,17 @@ export class TaskBoard extends Component {
 		this.inputs.set(`${gi}:${ti}`, input);
 		if (!collapsed) this.order.push(input);
 
-		// Where a moved task went: "→ Fri 13 Nov", click to go there.
-		if (task.carried && task.movedTo) {
+		// Where a moved task went: "→ Fri 13 Nov" or "→ Scratchpad", click to go there.
+		if (task.carried && task.movedTo && (task.movedTo === MOVED_TO_SCRATCHPAD || isDateKey(task.movedTo))) {
 			const to = task.movedTo;
+			const go = () => {
+				if (to === MOVED_TO_SCRATCHPAD) void this.plugin.openScratchpad();
+				else void this.plugin.open({ level: "day", date: to });
+			};
 			const link = row.createSpan({ cls: "daybook-moved-to", text: `→ ${movedLabel(to)}`, attr: { role: "link", tabindex: "0", "aria-label": `Open ${movedLabel(to)}` } });
-			link.addEventListener("click", () => void this.plugin.open({ level: "day", date: to }));
+			link.addEventListener("click", go);
 			link.addEventListener("keydown", (e) => {
-				if (e.key === "Enter") void this.plugin.open({ level: "day", date: to });
+				if (e.key === "Enter") go();
 			});
 		}
 
@@ -796,6 +830,19 @@ export class TaskBoard extends Component {
 	private async showTaskMenu(evt: MouseEvent, task: Task, gi: number, ti: number): Promise<void> {
 		const group = this.groups[gi]!;
 		const at = { x: evt.clientX, y: evt.clientY };
+		if (this.mode.scratchpad) {
+			// On the Scratchpad, a task can only go to a day.
+			const menu = new Menu();
+			menu.addItem((i) =>
+				i
+					.setTitle("Move to date…")
+					.setIcon("calendar-days")
+					.setDisabled(!isOpen(task))
+					.onClick(() => this.moveToDate(gi, ti)),
+			);
+			menu.showAtPosition(at);
+			return;
+		}
 		// Is this task one of the recurring rules? Then offer to stop it instead.
 		const key = task.text.trim().toLowerCase();
 		const rule = key ? (await this.plugin.recurring.rules()).find((r) => ruleId(r) === key) : undefined;
@@ -806,6 +853,13 @@ export class TaskBoard extends Component {
 				.setIcon("calendar-days")
 				.setDisabled(!isOpen(task))
 				.onClick(() => this.moveToDate(gi, ti)),
+		);
+		menu.addItem((i) =>
+			i
+				.setTitle("Move to scratchpad")
+				.setIcon("notebook-pen")
+				.setDisabled(!isOpen(task))
+				.onClick(() => void this.sendToScratchpad(gi, ti, task)),
 		);
 		if (rule) {
 			menu.addItem((i) =>
@@ -844,6 +898,13 @@ export class TaskBoard extends Component {
 
 	private moveToDate(gi: number, ti: number): void {
 		const task = this.groups[gi]?.tasks[ti];
+		if (this.mode.scratchpad) {
+			const moveOut = this.mode.moveOut;
+			if (!task || !isOpen(task) || !moveOut) return;
+			// From the Scratchpad: the task leaves it entirely (no [>] left behind).
+			new MoveModal(this.plugin.app, task.text, "", this.plugin.settings.firstDayOfWeek, (date) => void moveOut(gi, ti, task.text, date)).open();
+			return;
+		}
 		if (!task || !isOpen(task)) return;
 		const from = this.projectCtx?.date ?? todayKey();
 		new MoveModal(this.plugin.app, task.text, from, this.plugin.settings.firstDayOfWeek, (date) => void this.moveBlockTo(gi, ti, task, date)).open();
@@ -873,6 +934,28 @@ export class TaskBoard extends Component {
 		this.onChange();
 		this.render();
 		new Notice(`Moved to ${formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale())}.`);
+	}
+
+	/**
+	 * Day -> Scratchpad, like carry-over: the task and its unfinished subtasks
+	 * go to the Scratchpad (same card); here they stay marked
+	 * "[>] … (moved to Scratchpad)". The Scratchpad is written first.
+	 */
+	private async sendToScratchpad(gi: number, ti: number, task: Task): Promise<void> {
+		if (this.groups[gi]?.tasks[ti] !== task) return;
+		const preview = takeTaskBlock({ groups: structuredClone(this.groups) }, gi, ti, MOVED_TO_SCRATCHPAD);
+		if (preview.length === 0) return;
+		try {
+			await this.plugin.addToScratchpadCards(preview);
+		} catch (e) {
+			console.error("Daybook: could not move the task", e);
+			new Notice("Daybook could not move the task.");
+			return;
+		}
+		takeTaskBlock({ groups: this.groups }, gi, ti, MOVED_TO_SCRATCHPAD);
+		this.onChange();
+		this.render();
+		new Notice("Moved to the scratchpad.");
 	}
 
 	/** New card; in a project when `project` is given. */
@@ -986,7 +1069,7 @@ export class TaskBoard extends Component {
 			const r = this.gridEl.querySelector<HTMLElement>(`.daybook-task[data-group="${from.group}"][data-index="${i}"]`);
 			if (r) rows.push(r);
 		}
-		this.drag = { from, rows, handle, pointerId: evt.pointerId, line, target: null, targetCard: null };
+		this.drag = { from, rows, handle, pointerId: evt.pointerId, line, target: null, targetCard: null, dateCell: null };
 		for (const r of rows) r.addClass("is-dragging");
 		this.gridEl.addClass("is-dragging");
 
@@ -1016,6 +1099,15 @@ export class TaskBoard extends Component {
 		drag.targetCard = null;
 		drag.target = null;
 		drag.line.hide();
+		drag.dateCell?.removeClass("is-drop-target");
+		drag.dateCell = null;
+		// From the Scratchpad page: dropping on a day in the sidebar calendar moves the task there.
+		const cell = this.mode.moveOut ? el?.closest<HTMLElement>(".daybook-cal-day[data-date]") : null;
+		if (cell) {
+			drag.dateCell = cell;
+			cell.addClass("is-drop-target");
+			return;
+		}
 		if (!el || !this.gridEl.contains(el)) return;
 
 		const card = el.closest<HTMLElement>(".daybook-card");
@@ -1080,8 +1172,16 @@ export class TaskBoard extends Component {
 		if (drag.handle.hasPointerCapture(drag.pointerId)) drag.handle.releasePointerCapture(drag.pointerId);
 		for (const r of drag.rows) r.removeClass("is-dragging");
 		drag.targetCard?.removeClass("is-drop-target");
+		drag.dateCell?.removeClass("is-drop-target");
 		this.gridEl.removeClass("is-dragging");
 		drag.line.hide();
+
+		const date = drag.dateCell?.getAttr("data-date");
+		const task = this.groups[drag.from.group]?.tasks[drag.from.index];
+		if (drop && date && task && this.mode.moveOut) {
+			void this.mode.moveOut(drag.from.group, drag.from.index, task.text, date);
+			return;
+		}
 
 		if (!drop || !drag.target) return;
 		const { from, target } = drag;
@@ -1117,6 +1217,7 @@ function focusKey(group: TaskGroup): string {
 }
 
 /** "Fri 13 Nov" for a moved task's new day. */
-function movedLabel(date: string): string {
-	return formatDate(date, { weekday: "short", day: "numeric", month: "short" }, moment.locale());
+function movedLabel(to: string): string {
+	if (to === MOVED_TO_SCRATCHPAD) return "Scratchpad";
+	return isDateKey(to) ? formatDate(to, { weekday: "short", day: "numeric", month: "short" }, moment.locale()) : to;
 }

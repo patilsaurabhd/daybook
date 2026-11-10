@@ -30,9 +30,13 @@ export interface DaybookSettings {
 	monthLayout: DayLayout;
 	/** Year view layout: grid, reflection, or both. */
 	yearLayout: DayLayout;
+	/** Sidebar: the Scratchpad section is collapsed. */
+	scratchpadCollapsed: boolean;
+	/** Sidebar Scratchpad: cards folded away (lower-case names; "" = the main card). */
+	scratchpadClosedCards: string[];
 	/** Carry unfinished tasks to today automatically when it's opened. */
 	autoCarry: boolean;
-	/** Day view: Notes scratchpad collapsed. */
+	/** Day view: the Notes box is collapsed. */
 	notesCollapsed: boolean;
 	/** Tasks layout: projects (lower-case names) the user collapsed. */
 	collapsedProjects: string[];
@@ -54,6 +58,8 @@ export const DEFAULT_SETTINGS: DaybookSettings = {
 	yearLayout: "tasks",
 	notesCollapsed: false,
 	autoCarry: false,
+	scratchpadCollapsed: false,
+	scratchpadClosedCards: [],
 	collapsedProjects: [],
 	collapsedCards: [],
 };
