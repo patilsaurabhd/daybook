@@ -2038,11 +2038,6 @@ body:not(.is-phone) .is-fill .daybook-pane-tasks > .daybook-board > .daybook-lan
 	touch-action: pan-y;
 }
 
-.daybook-year-events {
-	display: flex;
-	flex-direction: column;
-	gap: var(--size-2-3);
-}
 
 .daybook-view button.daybook-add-event {
 	display: inline-flex;
@@ -2620,57 +2615,20 @@ body:not(.is-phone) .is-fill .daybook-week .daybook-mini {
 	font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Year: collapsible event list ---------- */
-
-.daybook-event-list {
-	display: flex;
-	flex-direction: column;
-	max-width: 720px;
-}
-
-.daybook-event-row {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) auto auto auto;
-	align-items: center;
-	gap: var(--size-4-2);
-	padding: var(--size-2-2) var(--size-2-3);
-	border-bottom: 1px solid var(--background-modifier-border);
-	font-size: var(--font-ui-small);
+/* Year in numbers: "+ N more events" under the rows */
+.daybook-stat-more {
+	padding: var(--size-2-1) var(--size-2-2);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border-radius: var(--radius-s);
 	cursor: pointer;
 }
 
-.daybook-event-row:hover,
-.daybook-event-row:focus-visible,
-.daybook-event-row.is-picked {
+.daybook-stat-more:hover,
+.daybook-stat-more:focus-visible {
+	color: var(--text-normal);
 	background-color: var(--background-modifier-hover);
 	outline: none;
-}
-
-.daybook-event-row-name {
-	font-weight: var(--font-semibold);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.daybook-event-row-when,
-.daybook-event-row-days {
-	color: var(--text-muted);
-	white-space: nowrap;
-}
-
-.daybook-event-row .clickable-icon {
-	padding: 2px;
-}
-
-@container (max-width: 560px) {
-	.daybook-event-row {
-		grid-template-columns: auto minmax(0, 1fr) auto auto;
-	}
-
-	.daybook-event-row-days {
-		display: none;
-	}
 }
 
 /* ---------- Sidebar: Scratchpad section under the calendar ---------- */

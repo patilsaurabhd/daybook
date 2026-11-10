@@ -10,7 +10,7 @@ import { dayKeyFromPath } from "../core/paths";
 import { boxFill, categoriesFor, countByCategory, yearRows, yearStats } from "../core/year";
 import { Category } from "../core/types";
 import { DayEvent, eventDates, eventsOn, orderRange } from "../core/event";
-import { eventColour, eventRangeLabel, newEvent, seriesLabel, showEventMenu } from "./eventActions";
+import { eventColour, newEvent } from "./eventActions";
 
 /** yearHighlight value for one event, picked in the event list. */
 const EVENT_PREFIX = "event:";
@@ -181,8 +181,21 @@ export class YearBoard extends Component {
 		const yearFrom = `${year}-01-01`;
 		const yearTo = `${year}-12-31`;
 		const daysOf = (tag: string) => [...catTags].filter(([, tags]) => tags.includes(tag)).map(([d]) => d);
+		// Events with no category (or one that isn't set up) get their own rows,
+		// since no category row counts them. One row per event, with its days.
+		const known = new Set(usable.map((c) => c.tag.toLowerCase()));
+		const loose = new Map<string, { name: string; colour: string; days: Set<DateKey> }>();
+		for (const e of events) {
+			if (e.category && known.has(e.category)) continue;
+			const row = loose.get(e.name) ?? { name: e.name, colour: eventColour(this.plugin, e), days: new Set<DateKey>() };
+			for (const d of eventDates(e, yearFrom, yearTo)) row.days.add(d);
+			loose.set(e.name, row);
+		}
 		this.renderNumbers(el, year, highlight, pickedEvent, {
 			categories: usable.map((c) => ({ c, days: counts.get(c.tag.toLowerCase()) ?? 0 })),
+			otherEvents: [...loose.values()]
+				.map((x) => ({ name: x.name, colour: x.colour, days: x.days.size }))
+				.sort((a, b) => b.days - a.days || a.name.localeCompare(b.name)),
 			notes: tagsByDay.size,
 			dates: pickedEvent ? [...pickedEventDays] : highlight === "all" ? [] : daysOf(highlight),
 			events: pickedEvent
@@ -195,8 +208,6 @@ export class YearBoard extends Component {
 				: (usable.find((c) => c.tag.toLowerCase() === highlight)?.color ?? "var(--interactive-accent)"),
 		});
 
-		const listed = pickedEvent ? events.filter((e) => e.name === pickedEvent) : highlight === "all" ? events : events.filter((e) => e.category === highlight);
-		this.renderEventList(el, listed, yearFrom, yearTo);
 	}
 
 	/**
@@ -208,7 +219,14 @@ export class YearBoard extends Component {
 		year: number,
 		highlight: string,
 		pickedEvent: string | null,
-		data: { categories: { c: Category; days: number }[]; notes: number; dates: DateKey[]; events: DayEvent[]; colour: string },
+		data: {
+			categories: { c: Category; days: number }[];
+			otherEvents: { name: string; colour: string; days: number }[];
+			notes: number;
+			dates: DateKey[];
+			events: DayEvent[];
+			colour: string;
+		},
 	): void {
 		const wrap = el.createDiv({ cls: "daybook-year-numbers" });
 		const locale = moment.locale();
@@ -217,24 +235,54 @@ export class YearBoard extends Component {
 		wrap.createDiv({ cls: "daybook-lane-label", text: label ? `${year} in numbers · ${label}` : `${year} in numbers` });
 
 		if (highlight === "all") {
-			const max = Math.max(1, ...data.categories.map((x) => x.days));
+			const others = data.otherEvents;
+			const max = Math.max(1, ...data.categories.map((x) => x.days), ...others.map((x) => x.days));
 			const rows = wrap.createDiv({ cls: "daybook-stat-rows" });
-			for (const { c, days } of data.categories) {
-				const row = rows.createDiv({ cls: "daybook-stat-row", attr: { role: "button", tabindex: "0", "aria-label": `Show ${c.name || c.tag}` } });
-				row.setCssProps({ "--daybook-cat-color": c.color, "--daybook-share": `${Math.round((days / max) * 100)}%` });
+			const statRow = (label: string, colour: string, days: number, pick: () => void) => {
+				const row = rows.createDiv({ cls: "daybook-stat-row", attr: { role: "button", tabindex: "0", "aria-label": `Show ${label}` } });
+				row.setCssProps({ "--daybook-cat-color": colour, "--daybook-share": `${Math.round((days / max) * 100)}%` });
 				row.createSpan({ cls: "daybook-chip-dot is-filled" });
-				row.createSpan({ cls: "daybook-stat-name", text: c.name || c.tag });
+				row.createSpan({ cls: "daybook-stat-name", text: label });
 				row.createDiv({ cls: "daybook-stat-bar" }).createDiv({ cls: "daybook-stat-fill" });
 				row.createSpan({ cls: "daybook-stat-value", text: `${days} day${days === 1 ? "" : "s"}` });
-				const pick = () => {
-					this.plugin.yearHighlight = c.tag.toLowerCase();
-					this.render();
-				};
 				row.addEventListener("click", pick);
 				row.addEventListener("keydown", (e) => {
 					if (e.key === "Enter" || e.key === " ") {
 						e.preventDefault();
 						pick();
+					}
+				});
+			};
+			for (const { c, days } of data.categories) {
+				statRow(c.name || c.tag, c.color, days, () => {
+					this.plugin.yearHighlight = c.tag.toLowerCase();
+					this.render();
+				});
+			}
+			// Events without a category: top 5, the rest behind "+ N more".
+			const showAll = this.plugin.yearEventsOpen;
+			for (const ev of showAll ? others : others.slice(0, 5)) {
+				statRow(ev.name, ev.colour, ev.days, () => {
+					this.plugin.yearHighlight = EVENT_PREFIX + ev.name;
+					this.render();
+				});
+			}
+			if (others.length > 5) {
+				const n = others.length - 5;
+				const more = rows.createDiv({
+					cls: "daybook-stat-more",
+					text: showAll ? "Show fewer events" : `+ ${n} more event${n === 1 ? "" : "s"}`,
+					attr: { role: "button", tabindex: "0" },
+				});
+				const flip = () => {
+					this.plugin.yearEventsOpen = !showAll;
+					this.render();
+				};
+				more.addEventListener("click", flip);
+				more.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						flip();
 					}
 				});
 			}
@@ -268,71 +316,6 @@ export class YearBoard extends Component {
 			col.createDiv({ cls: "daybook-month-bar-fill" }).setCssProps({ "--daybook-share": `${Math.round((n / max) * 100)}%` });
 			col.createDiv({ cls: "daybook-month-bar-label", text: monthName(i + 1, locale, "short").slice(0, 3) });
 		});
-	}
-
-	/**
-	 * The year's events (only the selected category's, or the picked event),
-	 * as a collapsed list sorted by date. Click a row to show it on the grid;
-	 * ⋯ for its menu.
-	 */
-	private renderEventList(el: HTMLElement, events: DayEvent[], from: DateKey, to: DateKey): void {
-		if (events.length === 0) return;
-		// A repeating event is listed once, with how often it repeats.
-		const rows: DayEvent[] = [];
-		const seen = new Set<string>();
-		for (const e of events) {
-			if (e.repeats) {
-				if (seen.has(e.name)) continue;
-				seen.add(e.name);
-			}
-			rows.push(e);
-		}
-		const open = this.plugin.yearEventsOpen;
-		const wrap = el.createDiv({ cls: "daybook-year-events" });
-		const head = wrap.createDiv({ cls: "daybook-notes-head", attr: { role: "button", tabindex: "0", "aria-expanded": String(open) } });
-		setIcon(head.createSpan({ cls: "daybook-notes-chevron" }), open ? "chevron-down" : "chevron-right");
-		head.createSpan({ cls: "daybook-pane-title", text: `Events (${rows.length})` });
-		const flip = () => {
-			this.plugin.yearEventsOpen = !open;
-			this.render();
-		};
-		head.addEventListener("click", flip);
-		head.addEventListener("keydown", (e) => {
-			if (e.key === "Enter" || e.key === " ") {
-				e.preventDefault();
-				flip();
-			}
-		});
-		if (!open) return;
-
-		const list = wrap.createDiv({ cls: "daybook-event-list" });
-		for (const e of rows) {
-			const days = events.filter((x) => x.name === e.name).reduce((n, x) => n + eventDates(x, from, to).length, 0);
-			const row = list.createDiv({ cls: "daybook-event-row", attr: { role: "button", tabindex: "0", "aria-label": `Show ${e.name} on the year` } });
-			row.toggleClass("is-picked", this.plugin.yearHighlight === EVENT_PREFIX + e.name);
-			row.createSpan({ cls: "daybook-chip-dot is-filled" }).setCssProps({ "--daybook-cat-color": eventColour(this.plugin, e) });
-			row.createSpan({ cls: "daybook-event-row-name", text: e.name });
-			row.createSpan({ cls: "daybook-event-row-when", text: e.repeats ? seriesLabel(e) : eventRangeLabel(e) });
-			row.createSpan({ cls: "daybook-event-row-days", text: `${days} day${days === 1 ? "" : "s"}` });
-			const more = row.createDiv({ cls: "clickable-icon", attr: { role: "button", tabindex: "0", "aria-label": "Event options" } });
-			setIcon(more, "more-horizontal");
-			more.addEventListener("click", (evt) => {
-				evt.stopPropagation();
-				showEventMenu(this.plugin, e, evt);
-			});
-			const pick = () => {
-				const key = EVENT_PREFIX + e.name;
-				this.plugin.yearHighlight = this.plugin.yearHighlight === key ? "all" : key;
-				this.render();
-			};
-			row.addEventListener("click", pick);
-			row.addEventListener("keydown", (evt) => {
-				if (evt.key === "Enter" || evt.key === " ") {
-					evt.preventDefault();
-					pick();
-				}
-			});
-		}
 	}
 
 	/**
