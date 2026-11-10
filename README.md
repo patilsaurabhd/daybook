@@ -4,10 +4,12 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 
 ![Day view](docs/day.png)
 
+![Adding a task, ticking tasks and habits on a day page](docs/day.gif)
+
 ## Features
 
 - **A calendar and four zoom levels.** A calendar in the right sidebar opens any day, week, month or year. Each has its own page, and you can step forward and back with ‹ Today ›.
-- **A day page for tasks, goals, tags and a diary.** Goals at the top, task cards on the left, the diary on the right, and a Notes box below for quick notes about the day. Switch between Tasks, Both and Diary, and paste or drop images into the diary.
+- **A day page for tasks, goals, tags and a diary.** Goals at the top, task cards on the left, the diary on the right, and a Notes box under the tasks for quick notes about the day. Switch between Tasks, Both and Diary, and paste or drop images into the diary.
 - **Task cards.** Group tasks into cards like "Work" or "Home", nest them with Tab, drag them between cards, and expand one card to fill the page.
 - **Week and month overviews you can edit in place.** Each day is a small card with its first tasks. Click one to add or tick tasks without leaving the overview. Weeks, months and years have their own goals and a reflection box.
 - **A year at a glance.** Every day as a box, coloured by category (Work, Health, Travel or your own), with a legend to highlight one category.
@@ -16,12 +18,34 @@ Plan your year, write your day, review your trips: tasks, goals and a diary in o
 - **Carry-over and move to date.** Review yesterday's unfinished tasks and bring the ones you want into today, or move any task to another date. The old day shows where it went.
 - **Projects with milestones.** A project stays on your day pages until it's finished, with a milestone checklist, a progress bar and its own task cards. A milestone can tick itself when its card is done.
 - **A Scratchpad.** Tasks and ideas that don't belong to a day yet, under the calendar or on their own page. Move them onto a day when you're ready, by dragging onto the calendar or with "Move to date…". A day's Notes box belongs to that day; the Scratchpad belongs to no day.
-- **Habits.** Tick your habits in the box at the bottom right of each day, see how many times you've done each one this week, and add one in a couple of keystrokes, for every day or just for today.
+- **Habits.** Tick your habits in the box at the bottom right of each day, and add one in a couple of keystrokes, for every day or just for today. There are no due days: the week page shows a table of your habits against the days (click a cell to tick it) with how many times you did each, the month page a small square per day, and the year page shades the days you did a habit and shows your days, times a week and longest run.
 - **Focus mode.** One day, only your open tasks and the diary, with no sidebars.
 
+## Screenshots
+
+**Week:** day cards you can edit in place, goals for the week, and your habits against the days.
+
 ![Week view](docs/week.png)
+
+![Ticking habits in the week table](docs/week-habits.gif)
+
+**Month:** every day with its first tasks, and events across the days.
+
 ![Month view](docs/month.png)
+
+**Year:** every day coloured by category. Pick a category, an event or a habit to highlight its days.
+
 ![Year view](docs/year.png)
+
+![Highlighting categories and habits on the year page](docs/year.gif)
+
+![The year with one habit picked](docs/year-habits.png)
+
+It follows your Obsidian theme, light or dark.
+
+![Day view in a dark theme](docs/day-dark.png)
+
+The screenshots use made-up demo data.
 
 ## How it's stored
 
@@ -51,6 +75,8 @@ A day note looks like this:
 ---
 tags:
   - work
+habits:
+  - gym
 ---
 
 ## Goals
@@ -69,9 +95,13 @@ tags:
 ## Diary
 
 A good day.
+
+## Notes
+
+Ask Sam about the slides.
 ```
 
-Notes are only created when you first type something, never just by opening a day. Daybook only changes the parts it manages (the `tags` property and its own sections). Anything else you write in a note is left as it is.
+Notes are only created when you first type something, never just by opening a day. Daybook only changes the parts it manages (the `tags`, `habits`, `habits-extra` and `recurring` properties and its own sections). Anything else you write in a note is left as it is.
 
 ## Install
 
