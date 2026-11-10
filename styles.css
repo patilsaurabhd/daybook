@@ -3359,3 +3359,12 @@ body:not(.is-phone) .is-fill .daybook-week-habits {
 	color: var(--text-muted);
 	font-weight: var(--font-semibold);
 }
+
+/* Phones: the calendar button in the page header (a 44px tap target). */
+.daybook-nav .daybook-calendar-btn {
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}

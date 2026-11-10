@@ -1,7 +1,7 @@
 // The main-area Daybook view. One view, four zoom levels (day, week, month,
 // year). Stage 1 implements the day level; the others show a placeholder.
 
-import { ItemView, TAbstractFile, TFile, ViewStateResult, WorkspaceLeaf, moment, setIcon } from "obsidian";
+import { ItemView, Platform, TAbstractFile, TFile, ViewStateResult, WorkspaceLeaf, moment, setIcon } from "obsidian";
 import type DaybookPlugin from "../main";
 import {
 	DateKey,
@@ -487,5 +487,12 @@ export class DaybookView extends ItemView {
 		const next = nav.createDiv({ cls: "clickable-icon", attr: { "aria-label": `Next ${this.level}`, role: "button", tabindex: "0" } });
 		setIcon(next, "chevron-right");
 		next.addEventListener("click", () => this.step(1));
+
+		// Phones hide the right sidebar: a button to bring in the calendar and Scratchpad.
+		if (Platform.isMobile) {
+			const cal = nav.createEl("button", { cls: "clickable-icon daybook-calendar-btn", attr: { "aria-label": "Show the calendar and scratchpad" } });
+			setIcon(cal, "calendar-days");
+			cal.addEventListener("click", () => void this.plugin.revealCalendar());
+		}
 	}
 }

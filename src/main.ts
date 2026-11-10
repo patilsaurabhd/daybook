@@ -49,6 +49,8 @@ export default class DaybookPlugin extends Plugin {
 	yearEventsOpen = false;
 	/** Year view: category tag to highlight, or "all". Session only. */
 	yearHighlight = "all";
+	/** No saved data yet: Daybook was just enabled for the first time. */
+	private firstRun = false;
 	/** Both layout: projects opened this time (they start collapsed). Session only. */
 	bothExpanded = new Set<string>();
 	/** Project shown on its own on the day page (lower-case name). Session only. */
@@ -186,11 +188,7 @@ export default class DaybookPlugin extends Plugin {
 
 		this.addSettingTab(new DaybookSettingTab(this.app, this));
 
-		this.app.workspace.onLayoutReady(() => {
-			if (this.app.workspace.getLeavesOfType(VIEW_TYPE_CALENDAR).length === 0) {
-				void this.app.workspace.getRightLeaf(false)?.setViewState({ type: VIEW_TYPE_CALENDAR });
-			}
-		});
+		this.app.workspace.onLayoutReady(() => void this.setUpCalendar());
 	}
 
 	onunload(): void {
@@ -363,6 +361,28 @@ export default class DaybookPlugin extends Plugin {
 		await this.open({ level: "day", date: todayKey() }); // focus ends on today's page
 	}
 
+	/**
+	 * Puts the calendar in the right sidebar if it isn't there. On a phone's
+	 * first run it also becomes the sidebar's shown tab (the sidebar stays
+	 * closed and the page keeps focus), so swiping in from the right finds it.
+	 */
+	private async setUpCalendar(): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_CALENDAR)[0] ?? null;
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false);
+			if (!leaf) return;
+			await leaf.setViewState({ type: VIEW_TYPE_CALENDAR });
+		}
+		if (!Platform.isMobile || !this.firstRun) return;
+		this.firstRun = false;
+		const page = workspace.getMostRecentLeaf();
+		await workspace.revealLeaf(leaf); // selects the calendar's tab
+		workspace.rightSplit.collapse();
+		if (page && workspace.getMostRecentLeaf() !== page) workspace.setActiveLeaf(page, { focus: false });
+		await this.saveSettings(false); // saved data marks the first run as done
+	}
+
 	async revealCalendar(): Promise<void> {
 		const { workspace } = this.app;
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_CALENDAR)[0] ?? null;
@@ -377,7 +397,9 @@ export default class DaybookPlugin extends Plugin {
 	// ---- Settings ----
 
 	async loadSettings(): Promise<void> {
-		const saved = ((await this.loadData()) ?? {}) as Partial<DaybookSettings> & { showDiary?: boolean };
+		const data: unknown = await this.loadData();
+		this.firstRun = data === null || data === undefined;
+		const saved = (data ?? {}) as Partial<DaybookSettings> & { showDiary?: boolean };
 		// Older versions had an on/off diary switch.
 		if (saved.dayLayout === undefined && saved.showDiary === false) saved.dayLayout = "tasks";
 		delete saved.showDiary;

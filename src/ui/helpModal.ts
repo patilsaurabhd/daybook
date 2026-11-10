@@ -8,6 +8,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
 		lines: [
 			"The calendar in the right sidebar opens any day, week (the numbers on the left), month or year (the title).",
 			"The Daybook icon in the left ribbon opens today, with the calendar.",
+			"On a phone, swipe in from the right edge for the calendar and Scratchpad, or tap the calendar button at the top of a Daybook page.",
 		],
 	},
 	{
