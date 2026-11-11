@@ -1,7 +1,7 @@
 {
 	"id": "daybook",
 	"name": "Daybook",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.7.2",
 	"description": "Plan your year, write your day, review your trips: tasks, goals and a diary in one calendar.",
 	"author": "Saurabh Patil",
